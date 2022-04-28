@@ -2,8 +2,15 @@ import bpy
 import bmesh
 import math
 import json
+from mathutils import Euler
 
 from pathlib import Path
+
+context = bpy.context
+data = bpy.data
+ops = bpy.ops
+scene = context.scene
+ob_ops = bpy.ops.object
 
 PARENT_DIR = Path(__file__).parent
 
@@ -33,16 +40,56 @@ class AddMannequin(bpy.types.Operator):
     bl_label = "Mannequin"
     bl_options = {"REGISTER", "UNDO"}
 
-    def execute(self, context):
-        file_path = PARENT_DIR / "resources" / 'mannequin.json'
-        with open(file_path.resolve(), 'rb') as f:
-            data = json.load(f)
-        mesh = bpy.data.meshes.new("Mannequin")
-        mesh.from_pydata(**data)
-        bpy.data.objects.new("Mannequin", mesh)
-        obj = bpy.data.objects["Mannequin"]
-        bpy.context.collection.objects.link(obj)
+    file_path = PARENT_DIR / "resources" / 'mannequin.json'
 
+    @property
+    def mannequin_name(self):
+        objs = context.collection.objects
+        names = sorted([obj.name for obj in objs if "Mannequin" in obj.name])
+        if not names:
+            return "Mannequin"
+        else:
+            last_name = names[-1]
+            if "." in last_name:
+                num = last_name.split('.')[1]
+                num = int(num) + 1
+            else:
+                num = 1
+            return f"Mannequin.{str(num).zfill(3)}"
+
+    def _get_mesh_data(self):
+        with open(self.file_path, 'rb') as f:
+            mesh_data = json.load(f)
+        mesh = data.meshes.new(self.mannequin_name)
+        mesh.from_pydata(**mesh_data)
+        return mesh
+
+    @staticmethod
+    def _handle_transforms(obj):
+        rot = Euler((1.5708, 0, 0))
+        obj.rotation_euler.rotate(rot)
+        init_z_dim = obj.dimensions.z
+        multiplier = 1.9 / init_z_dim
+        obj.dimensions *= multiplier
+
+    @staticmethod
+    def _place_in_scene(obj):
+        context.collection.objects.link(obj)
+        context.view_layer.objects.active = obj
+        context.object.select_set(True)
+        ob_ops.transform_apply(location=True, rotation=True, scale=True)
+        ob_ops.origin_set(type='ORIGIN_GEOMETRY', center='MEDIAN')
+        ob_ops.shade_smooth()
+        ob_ops.pivotobottom()
+        cursor_loc = scene.cursor.location
+        obj.location = cursor_loc
+
+    def execute(self, context):
+        mesh = self._get_mesh_data()
+        data.objects.new(self.mannequin_name, mesh)
+        obj = data.objects[self.mannequin_name]
+        self._handle_transforms(obj)
+        self._place_in_scene(obj)
         return {'FINISHED'}
 
 
