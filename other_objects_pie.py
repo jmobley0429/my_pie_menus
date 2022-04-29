@@ -21,5 +21,9 @@ class PIE_MT_AddOtherObjects(Menu):
         pie.operator("object.smart_add_lattice", text="Smart Lattice", icon="LATTICE_DATA")
         # Text
         pie.operator("object.text_add", text="Text", icon="SMALL_CAPS")
-        # Text
+        # Mannequin
         pie.operator("mesh.primitive_mannequin_add", text="Mannequin", icon="OUTLINER_OB_ARMATURE")
+        # Armature
+        pie.operator("object.armature_add", text="Armature", icon="ARMATURE_DATA")
+        # Metaball
+        pie.operator_menu_enum("object.metaball_add", "type")

@@ -15,11 +15,15 @@ if "bpy" in locals():
     importlib.reload(mesh_add_pie)
     importlib.reload(other_objects_pie)
     importlib.reload(utils)
+    importlib.reload(add_modifier)
+    importlib.reload(custom_modifier_operators)
 
 else:
     import bpy
+    from my_pie_menus import custom_modifier_operators
     from my_pie_menus import mesh_add_pie
     from my_pie_menus import other_objects_pie
+    from my_pie_menus import add_modifier
     from my_pie_menus import utils
 
 
@@ -54,6 +58,10 @@ classes = (
     utils.AddCameraCustom,
     utils.AddLatticeCustom,
     utils.AddMannequin,
+    custom_modifier_operators.CustomAddMirrorModifier,
+    custom_modifier_operators.CustomAddBevelModifier,
+    custom_modifier_operators.CustomAddQuickBevSubSurfModifier,
+    add_modifier.PIE_MT_AddModifier,
     mesh_add_pie.PIE_MT_AddMesh,
     other_objects_pie.PIE_MT_AddOtherObjects,
 )
@@ -75,6 +83,13 @@ def register():
             "PIE_MT_AddOtherObjects",
             shift=True,
             ctrl=True,
+        )
+        create_keymap(
+            "Object Mode",
+            "Q",
+            "PIE_MT_AddModifier",
+            shift=True,
+            alt=True,
         )
 
 
