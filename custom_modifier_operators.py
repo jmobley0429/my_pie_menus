@@ -1,5 +1,6 @@
 import bpy
 import bmesh
+import math
 from .custom_operator import CustomOperator
 
 
@@ -247,8 +248,10 @@ class ArrayModalOperator(CustomOperator, bpy.types.Operator):
 
     first_mouse_x: bpy.props.IntProperty()
     array_name: bpy.props.StringProperty()
+    constant: bpy.props.BoolProperty(default=True)
+    relative: bpy.props.BoolProperty(default=False)
     offset: bpy.props.FloatProperty(default=0.0)
-
+    count: bpy.props.IntProperty()
     working_axes = {"X": True, "Y": False, "Z": False}
 
     @property
@@ -266,7 +269,10 @@ class ArrayModalOperator(CustomOperator, bpy.types.Operator):
             self._set_axis_values(array_axes, 0, single=False)
         for a in axes:
             index = array_axes.index(a)
-            self.array.constant_offset_displace[index] = value
+            if self.constant:
+                self.array.constant_offset_displace[index] = value
+            else:
+                self.array.relative_offset_displace[index] = value
 
     def _set_array_count(self, event_type):
         value = 1
@@ -274,30 +280,64 @@ class ArrayModalOperator(CustomOperator, bpy.types.Operator):
             value = -1
         self.array.count += value
 
+    def _report_modal_status(self, context):
+        type = "CONSTANT"
+        if self.relative:
+            type = "RELATIVE"
+        msg = [
+            f'COUNT: {self.array.count}',
+            f'OFFSET: {self.offset:.2f}',
+            f'AXIS: {",".join(self.current_axes)}',
+            f'TYPE: {type}',
+        ]
+        context.area.header_text_set(' '.join(msg))
+
     def modal(self, context, event):
+        self._report_modal_status(context)
+        # handle axis changing
         if event.type in {'X', "Y", "Z"}:
             if event.value == 'PRESS':
                 ax = event.type
-                cur_val = self.working_axes[ax]
-                self.working_axes[ax] = not cur_val
+                # if pressing shift, XYZ will add or remove
+                # itself from active axes
+                if event.shift:
+                    cur_val = self.working_axes[ax]
+                    self.working_axes[ax] = not cur_val
+                # otherwise toggle axes individually
+                else:
+                    for axis, value in self.working_axes.items():
+                        self.working_axes[axis] = False
+                    self.working_axes[ax] = True
 
         if event.type in {'WHEELUPMOUSE', 'WHEELDOWNMOUSE'}:
             self._set_array_count(event.type)
 
+        if event.type == "TAB":
+            if event.value == "PRESS":
+                self.constant = not self.constant
+                self.relative = not self.relative
+
         if event.type == 'MOUSEMOVE':
-            print("event.mouse_x: ", event.mouse_x)
             multiplier = 0.1
             if event.shift:
                 multiplier = 0.01
             delta = self.first_mouse_x - event.mouse_x
-            print("Delta: ", delta)
-            self.offset = delta * (-multiplier)
+            if event.ctrl:
+                snap_val = math.floor(delta * (-multiplier)) + 1
+                self.offset = snap_val
+            else:
+                self.offset = delta * (-multiplier)
+            self.array.use_constant_offset = self.constant
+            self.array.use_relative_offset = self.relative
             self._set_axis_values(self.current_axes, self.offset)
 
         elif event.type == 'LEFTMOUSE':
+            context.area.header_text_set(None)
+            self.close_modifiers()
             return {'FINISHED'}
 
         elif event.type in {'RIGHTMOUSE', 'ESC'}:
+            context.area.header_text_set(None)
             return {'CANCELLED'}
 
         return {'RUNNING_MODAL'}
@@ -318,4 +358,95 @@ class ArrayModalOperator(CustomOperator, bpy.types.Operator):
             return {'RUNNING_MODAL'}
         else:
             self.report({'WARNING'}, "No active object, could not finish")
+            return {'CANCELLED'}
+
+
+class SolidifyModalOperator(CustomOperator, bpy.types.Operator):
+    bl_idname = "object.solidify_modal"
+    bl_label = "Solidify Modal"
+
+    thickness: bpy.props.FloatProperty()
+    mod_name: bpy.props.StringProperty()
+
+    numpad_input = {
+        "NUMPAD_2",
+        "NUMPAD_4",
+        "NUMPAD_6",
+        "NUMPAD_8",
+        "NUMPAD_1",
+        "NUMPAD_3",
+        "NUMPAD_5",
+        "NUMPAD_7",
+        "NUMPAD_9",
+        "NUMPAD_0",
+        "NUMPAD_ENTER",
+        "BACK_SPACE",
+        "NUMPAD_PERIOD",
+    }
+
+    numpad_value = []
+
+    @property
+    def modifier(self):
+        obj = self.get_active_obj()
+        return obj.modifiers[self.mod_name]
+
+    def exit_modal(self, context, cancelled=False):
+        context.area.header_text_set(None)
+        self.close_modifiers()
+        if cancelled:
+            return {'CANCELLED'}
+        return {'FINISHED'}
+
+    def modal(self, context, event):
+        print(event.type)
+        msg = f"Thickness: {self.thickness}"
+        string_value = ''.join(self.numpad_value)
+        if self.numpad_value:
+            msg += f" Value: {string_value}"
+        context.area.header_text_set(msg)
+        if event.type == 'MOUSEMOVE':
+            multiplier = 0.01
+            if event.shift:
+                multiplier = 0.001
+            self.thickness = self._initial_mouse - event.mouse_x
+            self.modifier.thickness = (self.thickness * multiplier) * -1
+
+        if event.type == 'F':
+            if event.value == "PRESS":
+                self.modifier.offset *= -1
+
+        if event.type in self.numpad_input:
+            if event.value == "PRESS":
+                if event.type == "NUMPAD_ENTER":
+                    self.modifier.thickness = float(string_value)
+                    return self.exit_modal(context)
+                if event.type == "BACK_SPACE":
+                    self.numpad_value.pop()
+                else:
+                    value = event.unicode
+                    self.numpad_value.append(value)
+
+        elif event.type == 'LEFTMOUSE':
+            return self.exit_modal(context)
+
+        elif event.type in {'RIGHTMOUSE', 'ESC'}:
+            return self.exit_modal(context, cancelled=True)
+
+        return {'RUNNING_MODAL'}
+
+    def invoke(self, context, event):
+        if context.object:
+            obj = self.get_active_obj()
+            bpy.ops.object.modifier_add(type="SOLIDIFY")
+            mod = self._get_last_modifier()
+            mod.use_even_offset = True
+            mod.offset = 1
+            self.mod_name = mod.name
+            self.thickness = mod.thickness
+
+            self._initial_mouse = event.mouse_x
+            context.window_manager.modal_handler_add(self)
+            return {'RUNNING_MODAL'}
+        else:
             return {'CANCELLED'}

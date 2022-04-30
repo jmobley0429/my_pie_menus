@@ -69,6 +69,7 @@ classes = (
     custom_modifier_operators.CustomRemesh,
     custom_modifier_operators.CustomDecimate,
     custom_modifier_operators.ArrayModalOperator,
+    custom_modifier_operators.SolidifyModalOperator,
     add_modifier.PIE_MT_ParticleSubPie,
     add_modifier.PIE_MT_MeshSubPie,
     add_modifier.PIE_MT_AddModifier,
