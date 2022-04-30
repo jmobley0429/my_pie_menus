@@ -237,3 +237,85 @@ class CustomDecimate(CustomOperator, bpy.types.Operator):
         mod = self._get_last_modifier()
         mod.ratio = 0.1
         return {"FINISHED"}
+
+
+class ArrayModalOperator(CustomOperator, bpy.types.Operator):
+    """Move an object with the mouse, example"""
+
+    bl_idname = "object.array_modal"
+    bl_label = "Array Modal"
+
+    first_mouse_x: bpy.props.IntProperty()
+    array_name: bpy.props.StringProperty()
+    offset: bpy.props.FloatProperty(default=0.0)
+
+    working_axes = {"X": True, "Y": False, "Z": False}
+
+    @property
+    def current_axes(self):
+        return [ax for ax, val in self.working_axes.items() if val]
+
+    @property
+    def array(self):
+        obj = self.get_active_obj()
+        return obj.modifiers[self.array_name]
+
+    def _set_axis_values(self, axes: list, value, single=True):
+        array_axes = ['X', 'Y', 'Z']
+        if single:
+            self._set_axis_values(array_axes, 0, single=False)
+        for a in axes:
+            index = array_axes.index(a)
+            self.array.constant_offset_displace[index] = value
+
+    def _set_array_count(self, event_type):
+        value = 1
+        if event_type == 'WHEELDOWNMOUSE':
+            value = -1
+        self.array.count += value
+
+    def modal(self, context, event):
+        if event.type in {'X', "Y", "Z"}:
+            if event.value == 'PRESS':
+                ax = event.type
+                cur_val = self.working_axes[ax]
+                self.working_axes[ax] = not cur_val
+
+        if event.type in {'WHEELUPMOUSE', 'WHEELDOWNMOUSE'}:
+            self._set_array_count(event.type)
+
+        if event.type == 'MOUSEMOVE':
+            print("event.mouse_x: ", event.mouse_x)
+            multiplier = 0.1
+            if event.shift:
+                multiplier = 0.01
+            delta = self.first_mouse_x - event.mouse_x
+            print("Delta: ", delta)
+            self.offset = delta * (-multiplier)
+            self._set_axis_values(self.current_axes, self.offset)
+
+        elif event.type == 'LEFTMOUSE':
+            return {'FINISHED'}
+
+        elif event.type in {'RIGHTMOUSE', 'ESC'}:
+            return {'CANCELLED'}
+
+        return {'RUNNING_MODAL'}
+
+    def invoke(self, context, event):
+        print('Starting Modal')
+        obj = self.get_active_obj()
+        bpy.ops.object.modifier_add(type="ARRAY")
+        array = self._get_last_modifier()
+        array.use_constant_offset = True
+        array.use_relative_offset = False
+        self.array_name = array.name
+        self._set_axis_values(self.current_axes, self.offset)
+
+        if context.object:
+            self.first_mouse_x = event.mouse_x
+            context.window_manager.modal_handler_add(self)
+            return {'RUNNING_MODAL'}
+        else:
+            self.report({'WARNING'}, "No active object, could not finish")
+            return {'CANCELLED'}

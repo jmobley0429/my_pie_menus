@@ -17,6 +17,7 @@ if "bpy" in locals():
     importlib.reload(utils)
     importlib.reload(add_modifier)
     importlib.reload(custom_modifier_operators)
+    importlib.reload(custom_operator)
 
 else:
     import bpy
@@ -25,6 +26,7 @@ else:
     from my_pie_menus import other_objects_pie
     from my_pie_menus import add_modifier
     from my_pie_menus import utils
+    from my_pie_menus import custom_operator
 
 
 def create_keymap(
@@ -66,6 +68,9 @@ classes = (
     custom_modifier_operators.CustomLattice,
     custom_modifier_operators.CustomRemesh,
     custom_modifier_operators.CustomDecimate,
+    custom_modifier_operators.ArrayModalOperator,
+    add_modifier.PIE_MT_ParticleSubPie,
+    add_modifier.PIE_MT_MeshSubPie,
     add_modifier.PIE_MT_AddModifier,
     mesh_add_pie.PIE_MT_AddMesh,
     other_objects_pie.PIE_MT_AddOtherObjects,
