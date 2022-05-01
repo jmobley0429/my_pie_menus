@@ -1,6 +1,8 @@
 import bpy
 import bmesh
 import math
+from math import pi
+from . import utils
 from .custom_operator import CustomOperator, CustomModalOperator
 
 
@@ -106,6 +108,7 @@ class BevelModifier(CustomOperator):
         bevel_mod.width = 0.05
         bevel_mod.harden_normals = harden_normals
         bevel_mod.miter_outer = "MITER_ARC"
+        bevel_mod.use_clamp_overlap = False
 
 
 class CustomAddBevelModifier(BevelModifier, bpy.types.Operator):
@@ -240,7 +243,7 @@ class CustomDecimate(CustomOperator, bpy.types.Operator):
         return {"FINISHED"}
 
 
-class ArrayModalOperator(CustomOperator, bpy.types.Operator):
+class ArrayModalOperator(CustomModalOperator, bpy.types.Operator):
     """Move an object with the mouse, example"""
 
     bl_idname = "object.array_modal"
@@ -358,7 +361,7 @@ class ArrayModalOperator(CustomOperator, bpy.types.Operator):
             return {'CANCELLED'}
 
 
-class SolidifyModalOperator(CustomOperator, bpy.types.Operator):
+class SolidifyModalOperator(CustomModalOperator, bpy.types.Operator):
     bl_idname = "object.solidify_modal"
     bl_label = "Solidify Modal"
 
@@ -368,7 +371,7 @@ class SolidifyModalOperator(CustomOperator, bpy.types.Operator):
         print(event.type)
         msg = f"Thickness: {self.thickness}"
         if self.numpad_value:
-            msg += f" Value: {self.string_value}"
+            msg += f" Value: {self.string_numpad_value}"
         context.area.header_text_set(msg)
         if event.type == 'MOUSEMOVE':
             multiplier = 0.01
@@ -407,6 +410,8 @@ class SolidifyModalOperator(CustomOperator, bpy.types.Operator):
             mod = self._get_last_modifier()
             mod.use_even_offset = True
             mod.offset = 1
+            mod.use_quality_normals = True
+            mod.solidify_mode = "NON_MANIFOLD"
             self.mod_name = mod.name
             self.thickness = mod.thickness
 
@@ -417,14 +422,14 @@ class SolidifyModalOperator(CustomOperator, bpy.types.Operator):
             return {'CANCELLED'}
 
 
-class ScrewModalOperator(CustomOperator, bpy.types.Operator):
+class ScrewModalOperator(CustomModalOperator, bpy.types.Operator):
     bl_idname = "object.screw_modal"
     bl_label = "Screw Modal"
 
     mod_name: bpy.props.StringProperty()
     screw_offset: bpy.props.FloatProperty()
     angle: bpy.props.FloatProperty()
-    steps: bpy.props.FloatProperty()
+    steps: bpy.props.IntProperty()
     initial_mouse: bpy.props.FloatProperty()
     iterations: bpy.props.IntProperty()
     axis: bpy.props.StringProperty()
@@ -433,28 +438,33 @@ class ScrewModalOperator(CustomOperator, bpy.types.Operator):
     use_normal_flip: bpy.props.BoolProperty()
 
     def set_screw_angle(self, delta, multiplier):
-        angle = min(0, max(260, delta * multiplier))
-        self.angle = angle
+        angle = delta * multiplier
+        new_angle = self.modifier.angle - math.radians(angle)
+        self.modifier.angle = utils.clamp(new_angle, 0, 2 * pi)
 
     def set_screw_count(self, event_type):
         if event_type == "WHEELUPMOUSE":
-            self.steps += 1
+            self.modifier.steps += 1
         else:
-            self.steps -= 1
+            self.modifier.steps -= 1
+
+    def _log_info_msg(self):
+        mod = self.modifier
+        msg = [
+            f"Degrees: {math.degrees(mod.angle)}",
+            f"Steps: {mod.steps}",
+            f"Offset: {mod.screw_offset}",
+            f"Iterations: {mod.iterations}",
+            f"Screw Axis: {mod.axis}",
+        ]
+        return ', '.join(msg)
 
     def modal(self, context, event):
-        self.modifier.screw_offset = self.screw_offset
-        self.modifier.angle = self.angle
-        self.modifier.steps = self.steps
-        self.modifier.iterations = self.iterations
-        self.modifier.axis = self.axis
-        self.modifier.use_object_screw_offset = self.use_object_screw_offset
-        self.modifier.use_normal_calculate = self.use_normal_calculate
-        self.modifier.use_normal_flip = self.use_normal_flip
+        self.display_modal_info(self._log_info_msg(), context)
         if event.type == 'MOUSEMOVE':
-            multiplier = 0.01
+            multiplier = 0.1
             if event.shift:
-                multiplier = 0.001
+                multiplier = 0.01
             delta = self.initial_mouse - event.mouse_x
             self.set_screw_angle(delta, multiplier)
 
@@ -464,7 +474,8 @@ class ScrewModalOperator(CustomOperator, bpy.types.Operator):
         if event.type in self.numpad_input:
             if event.value == "PRESS":
                 if event.type == "NUMPAD_ENTER":
-                    self.count = self.float_numpad_value
+                    self.modifier.steps = self.int_numpad_value
+                    self.numpad_value = []
                 if event.type == "BACK_SPACE":
                     self.numpad_value.pop()
                 else:
@@ -484,16 +495,16 @@ class ScrewModalOperator(CustomOperator, bpy.types.Operator):
             obj = self.get_active_obj()
             bpy.ops.object.modifier_add(type="SCREW")
             mod = self._get_last_modifier()
-            self.mod_name = mod.name
-            self.steps = mod.steps
-            self.screw_offset = 0
-            self.angle = 360
             self.initial_mouse = event.mouse_x
-            self.iterations = 1
-            self.axis = "Z"
-            self.use_object_screw_offset = False
-            self.use_normal_calculate = True
-            self.use_normal_flip = False
+            self.mod_name = mod.name
+            self.modifier.steps = mod.steps
+            self.modifier.screw_offset = 0
+            self.modifier.angle = math.radians(360)
+            self.modifier.iterations = 1
+            self.modifier.axis = "Z"
+            self.modifier.use_object_screw_offset = False
+            self.modifier.use_normal_calculate = True
+            self.modifier.use_normal_flip = False
             context.window_manager.modal_handler_add(self)
             return {'RUNNING_MODAL'}
         else:

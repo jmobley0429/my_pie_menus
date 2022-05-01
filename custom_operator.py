@@ -39,7 +39,7 @@ class CustomModalOperator(CustomOperator):
     mod_name: bpy.props.StringProperty()
     initial_mouse: bpy.props.IntProperty()
 
-    wheel_input = {'WHEELUPMOUSE' 'WHEELDOWNMOUSE'}
+    wheel_input = {'WHEELUPMOUSE', 'WHEELDOWNMOUSE'}
 
     numpad_input = {
         "NUMPAD_2",
@@ -77,3 +77,14 @@ class CustomModalOperator(CustomOperator):
     @property
     def float_numpad_value(self):
         return float(self.string_numpad_value)
+
+    @property
+    def int_numpad_value(self):
+        return int(self.string_numpad_value)
+
+    def display_modal_info(self, msg, context):
+        '''Takes a string of info for the
+        modal and displays it in the UI Header'''
+        if self.numpad_value:
+            msg += f" Input : {self.string_numpad_value}"
+        context.area.header_text_set(msg)

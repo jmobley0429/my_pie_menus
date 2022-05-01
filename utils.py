@@ -15,6 +15,10 @@ def get_active_obj():
     return bpy.context.active_object
 
 
+def clamp(value, min_num, max_num):
+    return min(max_num, max(min_num, value))
+
+
 class AddCameraCustom(bpy.types.Operator):
     bl_idname = "object.smart_add_camera"
     bl_label = "Smart Add Camera"
