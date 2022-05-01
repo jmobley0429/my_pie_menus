@@ -83,7 +83,7 @@ class PIE_MT_AddModifier(Menu):
         box = pie.split().column()
         op = box.operator("object.array_modal", text="Array", icon="MOD_ARRAY")
         box.operator("object.solidify_modal", text="Solidify", icon="MOD_SOLIDIFY")
-        box.operator("object.custom_lattice", text="Screw", icon="MOD_SCREW")
+        box.operator("object.custom_screw", text="Screw", icon="MOD_SCREW")
         # TL --
         op = pie.operator('wm.call_menu_pie', text="Physics", icon='PHYSICS')
         op.name = "PIE_MT_ParticleSubPie"

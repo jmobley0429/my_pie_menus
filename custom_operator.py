@@ -36,11 +36,8 @@ class CustomOperator:
 
 
 class CustomModalOperator(CustomOperator):
-<<<<<<< HEAD
-    pass
-=======
     mod_name: bpy.props.StringProperty()
-    first_mouse_x: bpy.props.IntProperty()
+    initial_mouse: bpy.props.IntProperty()
 
     numpad_input = {
         "NUMPAD_2",
@@ -70,4 +67,11 @@ class CustomModalOperator(CustomOperator):
         if cancelled:
             return {'CANCELLED'}
         return {'FINISHED'}
->>>>>>> modal_op_fix
+
+    @property
+    def string_numpad_value(self):
+        return ''.join(self.numpad_value)
+
+    @property
+    def float_numpad_value(self):
+        return float(self.string_numpad_value)
