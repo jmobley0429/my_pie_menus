@@ -39,6 +39,8 @@ class CustomModalOperator(CustomOperator):
     mod_name: bpy.props.StringProperty()
     initial_mouse: bpy.props.IntProperty()
 
+    wheel_input = {'WHEELUPMOUSE' 'WHEELDOWNMOUSE'}
+
     numpad_input = {
         "NUMPAD_2",
         "NUMPAD_4",
