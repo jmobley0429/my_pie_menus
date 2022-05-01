@@ -33,3 +33,37 @@ class CustomOperator:
     def _get_last_modifier(self):
         obj = self.get_active_obj()
         return obj.modifiers[:][-1]
+
+
+class CustomModalOperator(CustomOperator):
+    mod_name: bpy.props.StringProperty()
+    first_mouse_x: bpy.props.IntProperty()
+
+    numpad_input = {
+        "NUMPAD_2",
+        "NUMPAD_4",
+        "NUMPAD_6",
+        "NUMPAD_8",
+        "NUMPAD_1",
+        "NUMPAD_3",
+        "NUMPAD_5",
+        "NUMPAD_7",
+        "NUMPAD_9",
+        "NUMPAD_0",
+        "NUMPAD_ENTER",
+        "BACK_SPACE",
+        "NUMPAD_PERIOD",
+    }
+    numpad_value = []
+
+    @property
+    def modifier(self):
+        obj = self.get_active_obj()
+        return obj.modifiers[self.mod_name]
+
+    def exit_modal(self, context, cancelled=False):
+        context.area.header_text_set(None)
+        self.close_modifiers()
+        if cancelled:
+            return {'CANCELLED'}
+        return {'FINISHED'}
