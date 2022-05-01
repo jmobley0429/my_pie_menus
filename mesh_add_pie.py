@@ -22,63 +22,41 @@ class PIE_MT_AddMesh(Menu):
 
         # Right -- Cylinder
         box = pie.split().column()
-        op = box.operator(
-            "mesh.primitive_cylinder_add", text="Cylinder - 32", icon="MESH_CYLINDER"
-        )
+        op = box.operator("mesh.primitive_cylinder_add", text="Cylinder - 32", icon="MESH_CYLINDER")
         op.vertices = 32
-        op = box.operator(
-            "mesh.primitive_cylinder_add", text="Cylinder - 24", icon="MESH_CYLINDER"
-        )
+        op = box.operator("mesh.primitive_cylinder_add", text="Cylinder - 24", icon="MESH_CYLINDER")
 
         op.vertices = 16
-        op = box.operator(
-            "mesh.primitive_cylinder_add", text="Cylinder - 8", icon="MESH_CYLINDER"
-        )
+        op = box.operator("mesh.primitive_cylinder_add", text="Cylinder - 8", icon="MESH_CYLINDER")
         op.vertices = 8
 
         # bottom -- Circle
         box = pie.split().column()
-        op = box.operator(
-            "mesh.primitive_circle_add", text="Circle - 32", icon="MESH_CIRCLE"
-        )
+        op = box.operator("mesh.primitive_circle_add", text="Circle - 32", icon="MESH_CIRCLE")
         op.vertices = 32
-        op = box.operator(
-            "mesh.primitive_circle_add", text="Circle - 24", icon="MESH_CIRCLE"
-        )
+        op = box.operator("mesh.primitive_circle_add", text="Circle - 24", icon="MESH_CIRCLE")
         op.vertices = 24
-        op = box.operator(
-            "mesh.primitive_circle_add", text="Circle - 16", icon="MESH_CIRCLE"
-        )
+        op = box.operator("mesh.primitive_circle_add", text="Circle - 16", icon="MESH_CIRCLE")
         op.vertices = 16
-        op = box.operator(
-            "mesh.primitive_circle_add", text="Circle - 8", icon="MESH_CIRCLE"
-        )
+        op = box.operator("mesh.primitive_circle_add", text="Circle - 8", icon="MESH_CIRCLE")
         op.vertices = 8
 
         # Top -- Spheres
 
         box = pie.split().column()
-        op = box.operator(
-            "mesh.primitive_uv_sphere_add", text="UV Sphere 2m", icon="MESH_UVSPHERE"
-        )
+        op = box.operator("mesh.primitive_uv_sphere_add", text="UV Sphere 2m", icon="MESH_UVSPHERE")
         op.segments = 32
         op.ring_count = 16
         op.radius = 1
-        op = box.operator(
-            "mesh.primitive_uv_sphere_add", text="UV Sphere 1m", icon="MESH_UVSPHERE"
-        )
+        op = box.operator("mesh.primitive_uv_sphere_add", text="UV Sphere 1m", icon="MESH_UVSPHERE")
         op.segments = 24
         op.ring_count = 12
         op.radius = 0.75
-        op = box.operator(
-            "mesh.primitive_uv_sphere_add", text="UV Sphere .5m", icon="MESH_UVSPHERE"
-        )
+        op = box.operator("mesh.primitive_uv_sphere_add", text="UV Sphere .5m", icon="MESH_UVSPHERE")
         op.segments = 16
         op.ring_count = 8
         op.radius = 0.5
-        op = box.operator(
-            "mesh.primitive_uv_sphere_add", text="UV Sphere - .5m", icon="MESH_UVSPHERE"
-        )
+        op = box.operator("mesh.primitive_uv_sphere_add", text="UV Sphere - .5m", icon="MESH_UVSPHERE")
         op.segments = 12
         op.ring_count = 6
         op.radius = 0.25
@@ -86,35 +64,23 @@ class PIE_MT_AddMesh(Menu):
         # Curves
         box = pie.split().column()
 
-        op = box.operator(
-            "curve.primitive_bezier_curve_add", text="Bezier Curve", icon="IPO_BEZIER"
-        )
+        op = box.operator("curve.primitive_bezier_curve_add", text="Bezier Curve", icon="IPO_BEZIER")
 
-        op = box.operator(
-            "curve.primitive_nurbs_path_add", text="Path", icon="CURVE_PATH"
-        )
+        op = box.operator("curve.primitive_nurbs_path_add", text="Path", icon="CURVE_PATH")
 
-        op = box.operator(
-            "curve.primitive_bezier_circle_add", text="Curve Circle", icon="CURVE_NCIRCLE"
-        )
+        op = box.operator("curve.primitive_bezier_circle_add", text="Curve Circle", icon="CURVE_NCIRCLE")
 
         # Planes
         box = pie.split().column()
 
         op = box.operator("mesh.primitive_plane_add", text="Plane", icon="MESH_PLANE")
-
         op = box.operator("mesh.primitive_grid_add", text="Grid", icon="MESH_GRID")
-
-        op = box.operator(
-            "import_image.to_plane", text="Image as Plane", icon="FILE_IMAGE"
-        )
+        op = box.operator("mesh.primitive_vert_add", text="Single Vert", icon="DECORATE")
 
         # Random
         box = pie.split().column()
         op = box.operator("mesh.primitive_torus_add", text="Torus", icon="MESH_TORUS")
-        op = box.operator(
-            "mesh.primitive_ico_sphere_add", text="IcoSphere", icon="MESH_ICOSPHERE"
-        )
+        op = box.operator("mesh.primitive_ico_sphere_add", text="IcoSphere", icon="MESH_ICOSPHERE")
         op = box.operator("mesh.primitive_monkey_add", text="Monkey", icon="MESH_MONKEY")
 
         # empty / other

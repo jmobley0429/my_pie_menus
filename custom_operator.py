@@ -33,3 +33,7 @@ class CustomOperator:
     def _get_last_modifier(self):
         obj = self.get_active_obj()
         return obj.modifiers[:][-1]
+
+
+class CustomModalOperator(CustomOperator):
+    pass

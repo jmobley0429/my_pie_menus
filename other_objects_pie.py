@@ -18,7 +18,7 @@ class PIE_MT_AddOtherObjects(Menu):
         # Bottom -- Light Probe
         pie.operator_menu_enum("object.lightprobe_add", "type")
         # Top -- Smart Lattice
-        pie.operator("object.smart_add_lattice", text="Smart Lattice", icon="LATTICE_DATA")
+        pie.operator("import_image.to_plane", text="Image as Plane", icon="FILE_IMAGE")
         # Text
         pie.operator("object.text_add", text="Text", icon="SMALL_CAPS")
         # Mannequin
