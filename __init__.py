@@ -19,6 +19,8 @@ if "bpy" in locals():
     importlib.reload(custom_modifier_operators)
     importlib.reload(custom_operator)
     importlib.reload(convert_mesh_curve)
+    importlib.reload(keymap_settings)
+    importlib.reload(add_mesh_operators)
 
 else:
     import bpy
@@ -29,49 +31,17 @@ else:
     from my_pie_menus import add_modifier
     from my_pie_menus import utils
     from my_pie_menus import custom_operator
+    from my_pie_menus import add_mesh_operators
+    from my_pie_menus import keymap_settings
 
-
-def create_keymap(
-    name: str,
-    letter: str,
-    class_name: str,
-    shift=False,
-    ctrl=False,
-    alt=False,
-):
-    print(
-        f'''
-        Setting keymap for :
-        NAME: {name}
-        LETTER: {letter}
-        CLASS_NAME: {class_name}
-        '''
-    )
-    wm = bpy.context.window_manager
-    default_kms = wm.keyconfigs.default.keymaps
-    if wm.keyconfigs.addon:
-        print('Setting keymap...')
-        km = wm.keyconfigs.addon.keymaps.new(name=name)
-        kmi = km.keymap_items.new("wm.call_menu_pie", letter, "PRESS", shift=shift, ctrl=ctrl, alt=alt)
-        print(f"KM: {km}")
-        print(f"KMI: {kmi}")
-        kmi.properties.name = class_name
-        return km, kmi
-    #     kmi_string = kmi.to_string()
-    # for keymap in default_kms[name].keymap_items:
-    #     dkm_string = keymap.to_string()
-    #     if kmi_string == dkm_string:
-    #         keymap.active = False
-
-
-addon_keymaps = []
-
+KMS = keymap_settings.KEYMAP_SETTINGS
 
 classes = (
     # make sure dependency classes go first
     utils.AddCameraCustom,
     utils.AddLatticeCustom,
     utils.AddMannequin,
+    add_mesh_operators.AddCustomMeshOperator,
     custom_modifier_operators.CustomAddMirrorModifier,
     custom_modifier_operators.CustomAddBevelModifier,
     custom_modifier_operators.CustomAddQuickBevSubSurfModifier,
@@ -85,53 +55,39 @@ classes = (
     custom_modifier_operators.ScrewModalOperator,
     add_modifier.PIE_MT_ParticleSubPie,
     add_modifier.PIE_MT_MeshSubPie,
+    add_modifier.PIE_MT_NormalSubPie,
     add_modifier.PIE_MT_AddModifier,
     mesh_add_pie.PIE_MT_AddMesh,
     other_objects_pie.PIE_MT_AddOtherObjects,
     convert_mesh_curve.PIE_MT_ConvertMeshCurve,
 )
 
+addon_keymaps = []
+
 
 def register():
-    kms = [
-        create_keymap(
-            "3D View",
-            "A",
-            "PIE_MT_AddMesh",
-            shift=True,
-        ),
-        create_keymap(
-            "3D View",
-            "A",
-            "PIE_MT_AddOtherObjects",
-            shift=True,
-            ctrl=True,
-        ),
-        create_keymap(
-            "Object Mode",
-            "Q",
-            "PIE_MT_AddModifier",
-            shift=True,
-            alt=True,
-        ),
-        create_keymap(
-            "Object Mode",
-            "C",
-            "PIE_MT_ConvertMeshCurve",
-            alt=True,
-        ),
-    ]
-
-    for km, kmi in kms:
-        addon_keymaps.append((km, kmi))
-
     for cls in classes:
         bpy.utils.register_class(cls)
+    for setting in KMS:
+        name, letter, class_name, shift, ctrl, alt, space_type = list(setting.values())
+        wm = bpy.context.window_manager
+        default_kms = wm.keyconfigs.default.keymaps
+        wm = bpy.context.window_manager
+        if wm.keyconfigs.addon:
+            # adding space type makes it work ???
+            km = wm.keyconfigs.addon.keymaps.new(name=name, space_type=space_type)
+            kmi = km.keymap_items.new('wm.call_menu_pie', letter, 'PRESS', alt=alt, shift=shift, ctrl=ctrl)
+            kmi_string = kmi.to_string()
+            for keymap in default_kms[name].keymap_items:
+                dkm_string = keymap.to_string()
+                if kmi_string == dkm_string:
+                    keymap.active = False
+
+            kmi.properties.name = class_name
+            addon_keymaps.append((km, kmi))
 
 
 def unregister():
-    for cls in classes:
-        bpy.utils.unregister_class(cls)
 
     wm = bpy.context.window_manager
     kc = wm.keyconfigs.addon
@@ -139,6 +95,8 @@ def unregister():
         for km, kmi in addon_keymaps:
             km.keymap_items.remove(kmi)
     addon_keymaps.clear()
+    for cls in classes:
+        bpy.utils.unregister_class(cls)
 
 
 if __name__ == "__main__":

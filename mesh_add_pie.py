@@ -12,22 +12,26 @@ class PIE_MT_AddMesh(Menu):
         pie = layout.menu_pie()
         box = pie.split().column()
         # Left -- Cube
-        op = box.operator("mesh.primitive_cube_add", text="Cube - 2m", icon="MESH_CUBE")
+        op = box.operator("object.add_custom_mesh", text="Cube - 2m", icon="MESH_CUBE")
+        op.type = "Cube"
         op.size = 2
-        op = box.operator("mesh.primitive_cube_add", text="Cube - 1m", icon="MESH_CUBE")
+        op = box.operator("object.add_custom_mesh", text="Cube - 1m", icon="MESH_CUBE")
+        op.type = "Cube"
         op.size = 1
-        op = box.operator("mesh.primitive_cube_add", text="Cube - .5m", icon="MESH_CUBE")
+        op = box.operator("object.add_custom_mesh", text="Cube - .5m", icon="MESH_CUBE")
+        op.type = "Cube"
         op.size = 0.5
-        op.size = 1
 
         # Right -- Cylinder
         box = pie.split().column()
-        op = box.operator("mesh.primitive_cylinder_add", text="Cylinder - 32", icon="MESH_CYLINDER")
+        op = box.operator("object.add_custom_mesh", text="Cylinder - 32", icon="MESH_CYLINDER")
+        op.type = "Cylinder"
         op.vertices = 32
-        op = box.operator("mesh.primitive_cylinder_add", text="Cylinder - 24", icon="MESH_CYLINDER")
-
+        op = box.operator("object.add_custom_mesh", text="Cylinder - 24", icon="MESH_CYLINDER")
+        op.type = "Cylinder"
         op.vertices = 16
-        op = box.operator("mesh.primitive_cylinder_add", text="Cylinder - 8", icon="MESH_CYLINDER")
+        op = box.operator("object.add_custom_mesh", text="Cylinder - 8", icon="MESH_CYLINDER")
+        op.type = "Cylinder"
         op.vertices = 8
 
         # bottom -- Circle

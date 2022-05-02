@@ -14,14 +14,13 @@ class PIE_MT_ParticleSubPie(Menu):
 
     def draw(self, context):
         layout = self.layout
-        pie = layout.menu_pie()
-        op = pie.operator("object.modifier_add", text="Cloth", icon="MOD_CLOTH")
+        op = layout.operator("object.modifier_add", text="Cloth", icon="MOD_CLOTH")
         op.type = "CLOTH"
-        op = pie.operator("object.modifier_add", text="Particle", icon="PARTICLES")
+        op = layout.operator("object.modifier_add", text="Particle", icon="PARTICLES")
         op.type = "PARTICLE_SYSTEM"
-        op = pie.operator("object.modifier_add", text="Soft Body", icon="MOD_SOFT")
+        op = layout.operator("object.modifier_add", text="Soft Body", icon="MOD_SOFT")
         op.type = "SOFT_BODY"
-        op = pie.operator("rigidbody.object_add", text="Rigid Body", icon="RIGID_BODY")
+        op = layout.operator("rigidbody.object_add", text="Rigid Body", icon="RIGID_BODY")
 
 
 class PIE_MT_MeshSubPie(Menu):
@@ -36,13 +35,32 @@ class PIE_MT_MeshSubPie(Menu):
 
     def draw(self, context):
         layout = self.layout
-        pie = layout.menu_pie()
-        pie.operator("object.custom_remesh", text="Remesh", icon="MOD_REMESH")
-        pie.operator("object.custom_decimate", text="Decimate", icon="MOD_DECIM")
-        op = pie.operator("object.modifier_add", text="Smooth", icon="MOD_SMOOTH")
+        layout.operator("object.custom_remesh", text="Remesh", icon="MOD_REMESH")
+        layout.operator("object.custom_decimate", text="Decimate", icon="MOD_DECIM")
+        op = layout.operator("object.modifier_add", text="Smooth", icon="MOD_SMOOTH")
         op.type = "SMOOTH"
-        op = pie.operator("object.modifier_add", text="Wireframe", icon="MOD_WIREFRAME")
+        op = layout.operator("object.modifier_add", text="Wireframe", icon="MOD_WIREFRAME")
         op.type = "WIREFRAME"
+
+
+class PIE_MT_NormalSubPie(Menu):
+    bl_idname = "PIE_MT_NormalSubPie"
+    bl_label = "Pie Add Normal Modifiers"
+    bl_options = {"REGISTER", "UNDO"}
+
+    @classmethod
+    def poll(cls, context):
+        ob = context.object
+        return ob and ob.type != 'GPENCIL'
+
+    def draw(self, context):
+        layout = self.layout
+        op = layout.operator("object.modifier_add", text="Weighted Normal", icon="NORMALS_VERTEX")
+        op.type = "WEIGHTED_NORMAL"
+        op = layout.operator("object.modifier_add", text="UV Project", icon="MOD_UVPROJECT")
+        op.type = "UV_PROJECT"
+        op = layout.operator("object.modifier_add", text="Data Transfer", icon="CON_TRANSLIKE")
+        op.type = "DATA_TRANSFER"
 
 
 class PIE_MT_AddModifier(Menu):
@@ -85,12 +103,14 @@ class PIE_MT_AddModifier(Menu):
         box.operator("object.solidify_modal", text="Solidify", icon="MOD_SOLIDIFY")
         box.operator("object.screw_modal", text="Screw", icon="MOD_SCREW")
         # TL --
-        op = pie.operator('wm.call_menu_pie', text="Physics", icon='PHYSICS')
+        op = pie.operator('wm.call_menu', text="Physics", icon='PHYSICS')
         op.name = "PIE_MT_ParticleSubPie"
         # TR --
-        op = pie.operator('wm.call_menu_pie', text="Mesh", icon='MOD_REMESH')
+        op = pie.operator_menu_enum('wm.call_menu', text="Mesh", icon='MOD_REMESH')
         op.name = "PIE_MT_MeshSubPie"
         # BL --
-        pie.operator("object.modifier_add", text="Bottom Right", icon="MOD_CLOTH")
+        op = pie.operator("object.modifier_add", text="Geometry Nodes", icon="NODETREE")
+        op.type = "NODES"
         # BL --
-        pie.operator("object.modifier_add", text="Bottom Left", icon="MOD_CLOTH")
+        op = pie.operator("wm.call_menu", text="Normals and UVs", icon="SNAP_NORMAL")
+        op.name = "PIE_MT_NormalSubPie"
