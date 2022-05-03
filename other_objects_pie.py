@@ -10,7 +10,6 @@ class PIE_MT_AddOtherObjects(Menu):
     def draw(self, context):
         layout = self.layout
         pie = layout.menu_pie()
-
         # Left -- Lights
         pie.operator_menu_enum("object.light_add", "type")
         # Right -- Camera

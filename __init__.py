@@ -21,6 +21,7 @@ if "bpy" in locals():
     importlib.reload(convert_mesh_curve)
     importlib.reload(keymap_settings)
     importlib.reload(add_mesh_operators)
+    importlib.reload(snap_pie)
 
 else:
     import bpy
@@ -33,6 +34,7 @@ else:
     from my_pie_menus import custom_operator
     from my_pie_menus import add_mesh_operators
     from my_pie_menus import keymap_settings
+    from my_pie_menus import snap_pie
 
 KMS = keymap_settings.KEYMAP_SETTINGS
 
@@ -41,6 +43,7 @@ classes = (
     utils.AddCameraCustom,
     utils.AddLatticeCustom,
     utils.AddMannequin,
+    snap_pie.SetSnap,
     add_mesh_operators.AddCustomMeshOperator,
     custom_modifier_operators.CustomAddMirrorModifier,
     custom_modifier_operators.CustomAddBevelModifier,
@@ -59,6 +62,7 @@ classes = (
     add_modifier.PIE_MT_AddModifier,
     mesh_add_pie.PIE_MT_AddMesh,
     other_objects_pie.PIE_MT_AddOtherObjects,
+    snap_pie.PIE_MT_SnapOptions,
     convert_mesh_curve.PIE_MT_ConvertMeshCurve,
 )
 

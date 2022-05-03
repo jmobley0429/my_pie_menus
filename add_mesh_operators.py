@@ -24,7 +24,6 @@ class AddCustomMeshOperator(CustomOperator, bpy.types.Operator):
             vert = f', vertices={self.vertices}'
         eval(f"bpy.ops.{function}(size={self.size}{vert})")
         obj = self.get_active_obj()
-        z_offset = obj.dimensions[2] / 2
         try:
             bpy.ops.object.pivotobottom()
         except RuntimeError:
