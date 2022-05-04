@@ -22,6 +22,7 @@ if "bpy" in locals():
     importlib.reload(keymap_settings)
     importlib.reload(add_mesh_operators)
     importlib.reload(snap_pie)
+    importlib.reload(edit_mesh_operators)
 
 else:
     import bpy
@@ -35,6 +36,7 @@ else:
     from my_pie_menus import add_mesh_operators
     from my_pie_menus import keymap_settings
     from my_pie_menus import snap_pie
+    from my_pie_menus import edit_mesh_operators
 
 KMS = keymap_settings.KEYMAP_SETTINGS
 
@@ -56,6 +58,7 @@ classes = (
     custom_modifier_operators.ArrayModalOperator,
     custom_modifier_operators.SolidifyModalOperator,
     custom_modifier_operators.ScrewModalOperator,
+    edit_mesh_operators.MESH_OT_reduce_cylinder,
     add_modifier.PIE_MT_ParticleSubPie,
     add_modifier.PIE_MT_MeshSubPie,
     add_modifier.PIE_MT_NormalSubPie,

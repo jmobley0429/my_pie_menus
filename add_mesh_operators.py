@@ -18,10 +18,4 @@ class AddCustomMeshOperator(CustomOperator, bpy.types.Operator):
 
     def execute(self, context):
 
-        function = MESH_CLASSES[self.type]
-        vert = ''
-        if 'cylinder' in function:
-            vert = f', vertices={self.vertices}'
-        eval(f"bpy.ops.{function}(size={self.size}{vert})")
-
         return {'FINISHED'}

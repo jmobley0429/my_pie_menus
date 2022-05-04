@@ -18,6 +18,10 @@ class CustomAddMirrorModifier(CustomOperator, bpy.types.Operator):
     )
 
     def execute(self, context):
+        in_edit_mode = bool(bpy.context.object.mode == "EDIT")
+        if in_edit_mode:
+            bpy.ops.object.mode_set(mode="OBJECT")
+
         obj = self.get_active_obj()
         self._bisect_mesh()
         bpy.ops.object.modifier_add(type='MIRROR')
@@ -31,6 +35,8 @@ class CustomAddMirrorModifier(CustomOperator, bpy.types.Operator):
         mirror_mod.use_clip = True
         if self.mirror_type != "Z":
             mirror_mod.use_bisect_flip_axis[axis_index] = True
+        if in_edit_mode:
+            bpy.ops.object.mode_set(mode="EDIT")
 
         return {'FINISHED'}
 

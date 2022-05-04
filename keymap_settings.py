@@ -44,6 +44,16 @@ KEYMAP_SETTINGS = [
         "alt": 0,
         "space_type": "VIEW_3D",
     },
+    # Reduce Cylinder Edges
+    {
+        'name': "Mesh",
+        'letter': "X",
+        'class': "mesh.reduce_cylinder",
+        "shift": 1,
+        "ctrl": 0,
+        "alt": 1,
+        "space_type": "VIEW_3D",
+    },
     {
         'name': "3D View",
         'letter': "Q",
