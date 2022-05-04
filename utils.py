@@ -33,6 +33,7 @@ class AddCameraCustom(bpy.types.Operator):
             scale=(1, 1, 1),
         )
         bpy.ops.view3d.camera_to_view()
+        return {'FINISHED'}
 
 
 class AddMannequin(bpy.types.Operator):

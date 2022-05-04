@@ -23,11 +23,5 @@ class AddCustomMeshOperator(CustomOperator, bpy.types.Operator):
         if 'cylinder' in function:
             vert = f', vertices={self.vertices}'
         eval(f"bpy.ops.{function}(size={self.size}{vert})")
-        obj = self.get_active_obj()
-        try:
-            bpy.ops.object.pivotobottom()
-        except RuntimeError:
-            pass
-        obj.location[2] += z_offset
 
         return {'FINISHED'}

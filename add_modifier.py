@@ -106,7 +106,7 @@ class PIE_MT_AddModifier(Menu):
         op = pie.operator('wm.call_menu', text="Physics", icon='PHYSICS')
         op.name = "PIE_MT_ParticleSubPie"
         # TR --
-        op = pie.operator_menu_enum('wm.call_menu', text="Mesh", icon='MOD_REMESH')
+        op = pie.operator('wm.call_menu', text="Mesh", icon='MOD_REMESH')
         op.name = "PIE_MT_MeshSubPie"
         # BL --
         op = pie.operator("object.modifier_add", text="Geometry Nodes", icon="NODETREE")
