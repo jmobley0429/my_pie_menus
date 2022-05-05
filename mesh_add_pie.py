@@ -12,12 +12,12 @@ class PIE_MT_AddMesh(Menu):
         pie = layout.menu_pie()
         box = pie.split().column()
         # Left -- Cube
-        op = box.operator("mesh.primitive_cube_add", text="Cube - 2m", icon="MESH_CUBE")
-        op.size = 2
         op = box.operator("mesh.primitive_cube_add", text="Cube - 1m", icon="MESH_CUBE")
         op.size = 1
         op = box.operator("mesh.primitive_cube_add", text="Cube - .5m", icon="MESH_CUBE")
         op.size = 0.5
+        op = box.operator("mesh.primitive_cube_add", text="Cube - .25m", icon="MESH_CUBE")
+        op.size = 0.25
 
         # Right -- Cylinder
         box = pie.split().column()
@@ -42,22 +42,15 @@ class PIE_MT_AddMesh(Menu):
         # Top -- Spheres
 
         box = pie.split().column()
-        op = box.operator("mesh.primitive_uv_sphere_add", text="UV Sphere 2m", icon="MESH_UVSPHERE")
+        op = box.operator("mesh.primitive_uv_sphere_add", text="UV Sphere", icon="MESH_UVSPHERE")
         op.segments = 32
         op.ring_count = 16
         op.radius = 1
-        op = box.operator("mesh.primitive_uv_sphere_add", text="UV Sphere 1m", icon="MESH_UVSPHERE")
-        op.segments = 24
-        op.ring_count = 12
-        op.radius = 0.75
-        op = box.operator("mesh.primitive_uv_sphere_add", text="UV Sphere .5m", icon="MESH_UVSPHERE")
-        op.segments = 16
-        op.ring_count = 8
-        op.radius = 0.5
-        op = box.operator("mesh.primitive_uv_sphere_add", text="UV Sphere - .5m", icon="MESH_UVSPHERE")
-        op.segments = 12
-        op.ring_count = 6
-        op.radius = 0.25
+        op = box.operator("mesh.primitive_ico_sphere_add", text="IcoSphere", icon="MESH_ICOSPHERE")
+        op = box.operator("mesh.primitive_round_cube_add", text="QuadSphere", icon="MESH_UVSPHERE")
+        op.arc_div = 8
+        op.radius = 1
+        op.div_type = "CORNERS"
 
         # Curves
         box = pie.split().column()
@@ -78,7 +71,7 @@ class PIE_MT_AddMesh(Menu):
         # Random
         box = pie.split().column()
         op = box.operator("mesh.primitive_torus_add", text="Torus", icon="MESH_TORUS")
-        op = box.operator("mesh.primitive_ico_sphere_add", text="IcoSphere", icon="MESH_ICOSPHERE")
+        op = box.operator("mesh.primitive_cone_add", text="Cone", icon="MESH_CONE")
         op = box.operator("mesh.primitive_monkey_add", text="Monkey", icon="MESH_MONKEY")
 
         # empty / other
