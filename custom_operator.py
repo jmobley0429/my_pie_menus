@@ -34,6 +34,10 @@ class CustomOperator:
         obj = self.get_active_obj()
         return obj.modifiers[:][-1]
 
+    @property
+    def last_constraint(obj):
+        return obj.constraints[0]
+
 
 class CustomModalOperator(CustomOperator):
     mod_name: bpy.props.StringProperty()
