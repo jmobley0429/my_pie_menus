@@ -17,3 +17,6 @@ class MESH_OT_reduce_cylinder(bpy.types.Operator):
         bpy.ops.mesh.loop_multi_select(ring=False)
         bpy.ops.mesh.dissolve_mode(use_verts=True)
         return {'FINISHED'}
+
+
+classes = MESH_OT_reduce_cylinder

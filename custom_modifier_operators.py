@@ -515,3 +515,40 @@ class ScrewModalOperator(CustomModalOperator, bpy.types.Operator):
             return {'RUNNING_MODAL'}
         else:
             return {'CANCELLED'}
+
+
+class AddLatticeCustom(bpy.types.Operator):
+    bl_idname = "object.smart_add_lattice"
+    bl_label = "Add Smart Lattice"
+    bl_options = {"REGISTER", "UNDO"}
+
+    @staticmethod
+    def _get_uvw_res(coord_val):
+        cpm = coord_val
+        offset = 1
+        if cpm < 1:
+            cpm *= 100
+            cpm = math.ceil(cpm)
+        if cpm > 50:
+            cpm //= 10
+            cpm = math.ceil(cpm)
+        return max(math.floor(cpm) + offset, 2)
+
+    def execute(self, context):
+        obj = get_active_obj()
+
+        if obj:
+            size = obj.dimensions
+            loc = obj.matrix_world.translation
+
+            bpy.ops.object.add(type="LATTICE", location=loc)
+            lattice = get_active_obj()
+            lattice.dimensions = size
+            lattice.data.points_u = self._get_uvw_res(size.x)
+            lattice.data.points_v = self._get_uvw_res(size.y)
+            lattice.data.points_w = self._get_uvw_res(size.z)
+
+        else:
+            bpy.ops.object.add(type="LATTICE")
+
+        return {'FINISHED'}
