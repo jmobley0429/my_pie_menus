@@ -11,8 +11,8 @@ ob_ops = bpy.ops.object
 PARENT_DIR = Path(__file__).parent
 
 
-def get_active_obj():
-    return bpy.context.active_object
+def get_active_obj(context):
+    return context.active_object
 
 
 def clamp(value, min_num, max_num):
@@ -45,7 +45,6 @@ class AddMannequin(bpy.types.Operator):
 
     @property
     def mannequin_name(self):
-
         objs = bpy.context.collection.objects
         names = sorted([obj.name for obj in objs if "Mannequin" in obj.name])
         if not names:
@@ -75,15 +74,15 @@ class AddMannequin(bpy.types.Operator):
         obj.dimensions *= multiplier
 
     @staticmethod
-    def _place_in_scene(obj):
-        bpy.context.collection.objects.link(obj)
-        bpy.context.view_layer.objects.active = obj
-        bpy.context.object.select_set(True)
+    def _place_in_scene(obj, context):
+        context.collection.objects.link(obj)
+        context.view_layer.objects.active = obj
+        context.object.select_set(True)
         ob_ops.transform_apply(location=True, rotation=True, scale=True)
         ob_ops.origin_set(type='ORIGIN_GEOMETRY', center='MEDIAN')
         ob_ops.shade_smooth()
         ob_ops.pivotobottom()
-        cursor_loc = bpy.context.scene.cursor.location
+        cursor_loc = context.scene.cursor.location
         obj.location = cursor_loc
 
     def execute(self, context):
@@ -91,7 +90,7 @@ class AddMannequin(bpy.types.Operator):
         bpy.data.objects.new(self.mannequin_name, mesh)
         obj = bpy.data.objects[self.mannequin_name]
         self._handle_transforms(obj)
-        self._place_in_scene(obj)
+        self._place_in_scene(obj, context)
         return {'FINISHED'}
 
 
@@ -113,14 +112,14 @@ class AddLatticeCustom(bpy.types.Operator):
         return max(math.floor(cpm) + offset, 2)
 
     def execute(self, context):
-        obj = get_active_obj()
+        obj = get_active_obj(context)
 
         if obj:
             size = obj.dimensions
             loc = obj.matrix_world.translation
 
             bpy.ops.object.add(type="LATTICE", location=loc)
-            lattice = get_active_obj()
+            lattice = get_active_obj(context)
             lattice.dimensions = size
             lattice.data.points_u = self._get_uvw_res(size.x)
             lattice.data.points_v = self._get_uvw_res(size.y)

@@ -15,22 +15,22 @@ class AddLightSetup(CustomOperator, bpy.types.Operator):
         lights.append(bpy.data.objects[-1])
 
     @staticmethod
-    def add_light(location, name, energy, target_obj, color, size):
+    def add_light(context, location, name, energy, target_obj, color, size):
         bpy.ops.object.light_add(type="AREA", location=location)
         key = last_light()
         key.name = name
         key.energy = energy
         key.color = color
         key.size = size
-        light_obj = bpy.context.objectz
+        light_obj = context.object
         light_obj.constraints.new(type="TRACK_TO")
         mod = last_constraint(light_obj)
         mod.target = obj
 
     def execute(self, context):
-        obj = self.get_active_obj()
+        obj = self.get_active_obj(context)
         bpy.ops.object.empty_add(type="CIRCLE", location=obj.location)
-        track_obj = self.get_active_obj()
+        track_obj = self.get_active_obj(context)
         track_obj.name = "Tracker"
 
         obj_w, obj_d, obj_h = obj.dimensions

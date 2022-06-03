@@ -11,16 +11,16 @@ class CustomOperator:
         return bpy.context.active_object
 
     @staticmethod
-    def get_selected_objects():
-        return bpy.context.selected_objects
+    def get_selected_objects(context):
+        return context.selected_objects
 
     @staticmethod
-    def get_last_added_object():
-        return bpy.context.scene.objects[:][-1]
+    def get_last_added_object(context):
+        return context.scene.objects[:][-1]
 
-    def get_mod_and_target_objects(self):
+    def get_mod_and_target_objects(self, context):
         target = self.get_active_obj()
-        objs = set(self.get_selected_objects())
+        objs = set(self.get_selected_objects(context))
         mod = list(objs - {target})[0]
         return (mod, target)
 
@@ -30,7 +30,7 @@ class CustomOperator:
         for mod in modifiers:
             mod.show_expanded = False
 
-    def _get_last_modifier(self):
+    def _get_last_modifier(self, context):
         obj = self.get_active_obj()
         return obj.modifiers[:][-1]
 

@@ -72,4 +72,13 @@ KEYMAP_SETTINGS = [
         "alt": 1,
         "space_type": "VIEW_3D",
     },
+    {
+        'name': "Mesh",
+        'letter': "E",
+        'class': "PIE_MT_PIE_edge_menu",
+        "shift": 1,
+        "ctrl": 1,
+        "alt": 0,
+        "space_type": "VIEW_3D",
+    },
 ]

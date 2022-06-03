@@ -9,7 +9,7 @@ class SetSnap(bpy.types.Operator):
     type: bpy.props.StringProperty()
 
     def execute(self, context):
-        scene = bpy.context.scene
+        scene = context.scene
         scene.tool_settings.snap_elements = {self.type}
         return {"FINISHED"}
 

@@ -18,12 +18,12 @@ class CustomAddMirrorModifier(CustomOperator, bpy.types.Operator):
     )
 
     def execute(self, context):
-        in_edit_mode = bool(bpy.context.object.mode == "EDIT")
+        in_edit_mode = bool(context.object.mode == "EDIT")
         if in_edit_mode:
             bpy.ops.object.mode_set(mode="OBJECT")
 
         obj = self.get_active_obj()
-        self._bisect_mesh()
+        self._bisect_mesh(context)
         bpy.ops.object.modifier_add(type='MIRROR')
         axis_index = self.mirror_axis
         mirror_mod = obj.modifiers[:][-1]
@@ -40,8 +40,8 @@ class CustomAddMirrorModifier(CustomOperator, bpy.types.Operator):
 
         return {'FINISHED'}
 
-    def _bisect_mesh(self):
-        C = bpy.context
+    def _bisect_mesh(self, context):
+        C = context
         obj = C.active_object
         bm = bmesh.new()
         me = obj.data
@@ -111,7 +111,7 @@ class BevelModifier(CustomOperator):
         bpy.ops.object.modifier_add(type='BEVEL')
         bevel_mod = obj.modifiers[:][-1]
         bevel_mod.segments = 2
-        bevel_mod.width = 0.05
+        bevel_mod.width = 0.0025
         bevel_mod.harden_normals = harden_normals
         bevel_mod.miter_outer = "MITER_ARC"
         bevel_mod.use_clamp_overlap = False
@@ -174,7 +174,7 @@ class CustomSimpleDeform(CustomOperator, bpy.types.Operator):
         obj = self.get_active_obj()
         loc = obj.location
         bpy.ops.object.modifier_add(type='SIMPLE_DEFORM')
-        mod = self._get_last_modifier()
+        mod = self._get_last_modifier(context)
         mod.deform_method = 'BEND'
         mod.deform_axis = 'Z'
         bpy.ops.object.add(type="EMPTY")
@@ -193,14 +193,14 @@ class CustomShrinkwrap(CustomOperator, bpy.types.Operator):
     bl_label = "Add Custom Shrinkwrap"
 
     def execute(self, context):
-        num_objs = len(bpy.context.selected_objects)
+        num_objs = len(context.selected_objects)
         if num_objs < 2:
             self.report({'INFO'}, 'Select a modified and target object!')
             return {'CANCELLED'}
         mod, target = self.get_mod_and_target_objects()
-        bpy.context.view_layer.objects.active = mod
+        context.view_layer.objects.active = mod
         bpy.ops.object.modifier_add(type="SHRINKWRAP")
-        sw = self._get_last_modifier()
+        sw = self._get_last_modifier(context)
         sw.target = target
         sw.offset = 0.01
 
@@ -215,7 +215,7 @@ class CustomLattice(CustomOperator, bpy.types.Operator):
 
     def execute(self, context):
         bpy.ops.object.modifier_add(type="LATTICE")
-        lat = self._get_last_modifier()
+        lat = self._get_last_modifier(context)
         bpy.ops.object.smart_add_lattice()
         obj = self.get_active_obj()
         lat.object = obj
@@ -230,7 +230,7 @@ class CustomRemesh(CustomOperator, bpy.types.Operator):
 
     def execute(self, context):
         bpy.ops.object.modifier_add(type="REMESH")
-        mod = self._get_last_modifier()
+        mod = self._get_last_modifier(context)
         mod.voxel_size = 0.025
         mod.use_smooth_shade = True
         return {"FINISHED"}
@@ -244,7 +244,7 @@ class CustomDecimate(CustomOperator, bpy.types.Operator):
 
     def execute(self, context):
         bpy.ops.object.modifier_add(type="DECIMATE")
-        mod = self._get_last_modifier()
+        mod = self._get_last_modifier(context)
         mod.ratio = 0.1
         return {"FINISHED"}
 
@@ -265,7 +265,7 @@ class ArrayModalOperator(CustomModalOperator, bpy.types.Operator):
         return [ax for ax, val in self.working_axes.items() if val]
 
     @property
-    def array(self):
+    def array(self, context):
         obj = self.get_active_obj()
         return obj.modifiers[self.mod_name]
 
@@ -281,6 +281,7 @@ class ArrayModalOperator(CustomModalOperator, bpy.types.Operator):
                 self.modifier.relative_offset_displace[index] = value
 
     def _set_array_count(self, event_type):
+        self._set_axis_values(self.current_axes, self.offset)
         value = 1
         if event_type == 'WHEELDOWNMOUSE':
             value = -1
@@ -352,7 +353,7 @@ class ArrayModalOperator(CustomModalOperator, bpy.types.Operator):
         print('Starting Modal')
         obj = self.get_active_obj()
         bpy.ops.object.modifier_add(type="ARRAY")
-        array = self._get_last_modifier()
+        array = self._get_last_modifier(context)
         array.use_constant_offset = True
         array.use_relative_offset = False
         self.mod_name = array.name
@@ -413,7 +414,7 @@ class SolidifyModalOperator(CustomModalOperator, bpy.types.Operator):
         if context.object:
             obj = self.get_active_obj()
             bpy.ops.object.modifier_add(type="SOLIDIFY")
-            mod = self._get_last_modifier()
+            mod = self._get_last_modifier(context)
             mod.use_even_offset = True
             mod.offset = 1
             mod.use_quality_normals = True
@@ -500,7 +501,7 @@ class ScrewModalOperator(CustomModalOperator, bpy.types.Operator):
         if context.object:
             obj = self.get_active_obj()
             bpy.ops.object.modifier_add(type="SCREW")
-            mod = self._get_last_modifier()
+            mod = self._get_last_modifier(context)
             self.initial_mouse = event.mouse_x
             self.mod_name = mod.name
             self.modifier.steps = mod.steps

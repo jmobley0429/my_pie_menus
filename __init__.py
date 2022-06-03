@@ -24,6 +24,9 @@ if "bpy" in locals():
     importlib.reload(snap_pie)
     importlib.reload(edit_mesh_operators)
     importlib.reload(lighting_setup)
+    importlib.reload(edge_pie_menu)
+    importlib.reload(object_io_pie)
+    importlib.reload(quick_increase_cylinder_edges)
 
 else:
     import bpy
@@ -39,6 +42,10 @@ else:
     from my_pie_menus import snap_pie
     from my_pie_menus import edit_mesh_operators
     from my_pie_menus import lighting_setup
+    from my_pie_menus import edge_pie_menu
+    from my_pie_menus import object_io_pie
+    from my_pie_menus import select_linked_pie
+    from my_pie_menus import quick_increase_cylinder_edges
 
 KMS = keymap_settings.KEYMAP_SETTINGS
 
@@ -47,7 +54,6 @@ classes = (
     utils.AddCameraCustom,
     utils.AddLatticeCustom,
     utils.AddMannequin,
-    snap_pie.SetSnap,
     add_mesh_operators.AddCustomMeshOperator,
     custom_modifier_operators.CustomAddMirrorModifier,
     custom_modifier_operators.CustomAddBevelModifier,
@@ -61,7 +67,10 @@ classes = (
     custom_modifier_operators.SolidifyModalOperator,
     custom_modifier_operators.ScrewModalOperator,
     edit_mesh_operators.MESH_OT_reduce_cylinder,
+    edit_mesh_operators.BoundaryToSeam,
+    edit_mesh_operators.MESH_OT_increase_cylinder_res,
     lighting_setup.AddLightSetup,
+    snap_pie.SetSnap,
     add_modifier.PIE_MT_ParticleSubPie,
     add_modifier.PIE_MT_MeshSubPie,
     add_modifier.PIE_MT_NormalSubPie,
@@ -70,6 +79,10 @@ classes = (
     other_objects_pie.PIE_MT_AddOtherObjects,
     snap_pie.PIE_MT_SnapOptions,
     convert_mesh_curve.PIE_MT_ConvertMeshCurve,
+    edge_pie_menu.PIE_MT_edge_menu,
+    object_io_pie.OBJECT_MT_object_io_menu,
+    select_linked_pie.MESH_MT_select_linked_pie,
+    quick_increase_cylinder_edges.OBJECT_OT_increase_cylinder_res,
 )
 
 addon_keymaps = []
@@ -105,7 +118,7 @@ def unregister():
         for km, kmi in addon_keymaps:
             km.keymap_items.remove(kmi)
     addon_keymaps.clear()
-    for cls in classes:
+    for cls in reversed(classes):
         bpy.utils.unregister_class(cls)
 
 
