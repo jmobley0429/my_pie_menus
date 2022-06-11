@@ -29,8 +29,12 @@ class PIE_MT_edge_menu(Menu):
         col.operator("mesh.boundary_to_seam", text="Boundary to Seam")
         # Right
         col = pie.split().column()
-        col.operator("transform.edge_bevelweight", text="Set Bevel Weight").value = 1
-        col.operator("transform.edge_bevelweight", text="Clear Bevel Weight").value = -1
+        op = col.operator("mesh.set_edge_weight", text="Set Bevel Weight")
+        op.weight_type = "BEVEL"
+        op.edge_weight = 1
+        op = col.operator("mesh.set_edge_weight", text="Clear Bevel Weight")
+        op.weight_type = "BEVEL"
+        op.edge_weight = 0
         # Bottom
 
         bx = pie.split().box()
@@ -50,7 +54,8 @@ class PIE_MT_edge_menu(Menu):
         #
         col = pie.split().column()
         col.operator("mesh.mark_sharp")
-        col.operator("mesh.mark_sharp").clear = True
+        col.operator("mesh.mark_sharp", text="Clear Sharp").clear = True
+        col.operator("mesh.boundary_to_sharp")
         #
         col = pie.split().column()
         col.operator("mesh.bridge_edge_loops")
@@ -58,8 +63,13 @@ class PIE_MT_edge_menu(Menu):
         #
         # Right
         col = pie.split().column()
-        col.operator("transform.edge_crease", text="Set Crease").value = 1
-        col.operator("transform.edge_crease", text="Clear Crease").value = -1
+        op = col.operator("mesh.set_edge_weight", text="Set Crease")
+        op.weight_type = "CREASE"
+        op.edge_weight = 1
+        op = col.operator("mesh.set_edge_weight", text="Clear Crease")
+        op.weight_type = "CREASE"
+        op.edge_weight = 0
+
         # Bottom
         col = pie.split().column()
         col.operator("mesh.edge_rotate", text="Rotate CW").use_ccw = False

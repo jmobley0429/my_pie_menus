@@ -1,8 +1,11 @@
+from collections import deque
+
 import bpy
 import bmesh
 import math
 from math import pi
 from my_pie_menus.resources import utils
+from mathutils import Vector
 from .custom_operator import CustomOperator, CustomModalOperator
 
 
@@ -111,7 +114,7 @@ class BevelModifier(CustomOperator):
         bpy.ops.object.modifier_add(type='BEVEL')
         bevel_mod = obj.modifiers[:][-1]
         bevel_mod.segments = 2
-        bevel_mod.width = 0.05
+        bevel_mod.width = 0.025
         bevel_mod.harden_normals = harden_normals
         bevel_mod.miter_outer = "MITER_ARC"
         bevel_mod.use_clamp_overlap = False
@@ -164,26 +167,53 @@ class CustomWeightedNormal(CustomOperator, bpy.types.Operator):
         return {"FINISHED"}
 
 
-class CustomSimpleDeform(CustomOperator, bpy.types.Operator):
-    """Add Custom Weighted Normal Modifier"""
+class CustomSimpleDeform(CustomModalOperator, bpy.types.Operator):
+    """Add Custom Simple Deform Modifier"""
 
     bl_idname = "object.custom_simple_deform"
     bl_label = "Add Custom Simple Deform"
 
-    def execute(self, context):
-        obj = self.get_active_obj()
-        loc = obj.location
-        bpy.ops.object.modifier_add(type='SIMPLE_DEFORM')
-        mod = self._get_last_modifier()
-        mod.deform_method = 'BEND'
-        mod.deform_axis = 'Z'
-        bpy.ops.object.add(type="EMPTY")
-        empty = self.get_last_added_object()
-        empty.name = "Simple_Deform_Pivot"
-        mod.origin = empty
-        self.close_modifiers()
+    angle: bpy.props.FloatProperty(name='angle', description='Deform Angle', default=45.0)
+    axis: bpy.props.StringProperty(name='axis', description='Deform Axis', default="Z")
+    x: bpy.props.IntProperty(min=0, max=360)
+    mod = None
 
-        return {"FINISHED"}
+    @classmethod
+    def poll(cls, context):
+        return context.active_object is not None
+
+    def invoke(self, context, event):
+        obj = self.get_active_obj()
+        bpy.ops.object.modifier_add(type='SIMPLE_DEFORM')
+        self.mod = self._get_last_modifier()
+        self.mod.deform_method = 'BEND'
+        self.mod.deform_axis = 'Z'
+        self.init_x = event.mouse_x
+        self.x = 0
+        context.window_manager.modal_handler_add(self)
+        return {"RUNNING_MODAL"}
+
+    def modal(self, context, event):
+        msg = f'Angle: {self.angle}, Axis: {self.axis}'
+        self.display_modal_info(msg, context)
+        if event.type == 'MOUSEMOVE':
+            delta = int((event.mouse_x) - self.init_x)
+            self.angle = utils.clamp(delta, 0, 360)
+            self.mod.angle = math.radians(self.angle)
+        elif event.type in {"X", "Y", "Z"}:
+            self.axis = event.type
+            self.mod.deform_axis = self.axis
+
+        elif event.type == 'LEFTMOUSE':  # Confirm
+            self._clear_info(context)
+            return {'FINISHED'}
+
+        elif event.type in {'RIGHTMOUSE', 'ESC'}:  # Cancel
+            self._clear_info(context)
+            bpy.ops.object.modifier_remove(modifier=self.mod.name)
+            return {'CANCELLED'}
+
+        return {'RUNNING_MODAL'}
 
 
 class CustomShrinkwrap(CustomOperator, bpy.types.Operator):
@@ -338,12 +368,12 @@ class ArrayModalOperator(CustomModalOperator, bpy.types.Operator):
             self._set_axis_values(self.current_axes, self.offset)
 
         elif event.type == 'LEFTMOUSE':
-            context.area.header_text_set(None)
+            self._clear_info(context)
             self.close_modifiers()
             return {'FINISHED'}
 
         elif event.type in {'RIGHTMOUSE', 'ESC'}:
-            context.area.header_text_set(None)
+            self._clear_info(context)
             return {'CANCELLED'}
 
         return {'RUNNING_MODAL'}
@@ -517,7 +547,7 @@ class ScrewModalOperator(CustomModalOperator, bpy.types.Operator):
             return {'CANCELLED'}
 
 
-class AddLatticeCustom(bpy.types.Operator):
+class AddLatticeCustom(CustomOperator, bpy.types.Operator):
     bl_idname = "object.smart_add_lattice"
     bl_label = "Add Smart Lattice"
     bl_options = {"REGISTER", "UNDO"}
@@ -535,14 +565,14 @@ class AddLatticeCustom(bpy.types.Operator):
         return max(math.floor(cpm) + offset, 2)
 
     def execute(self, context):
-        obj = get_active_obj()
+        obj = self.get_active_obj()
 
         if obj:
             size = obj.dimensions
             loc = obj.matrix_world.translation
 
             bpy.ops.object.add(type="LATTICE", location=loc)
-            lattice = get_active_obj()
+            lattice = self.get_active_obj()
             lattice.dimensions = size
             lattice.data.points_u = self._get_uvw_res(size.x)
             lattice.data.points_v = self._get_uvw_res(size.y)
@@ -552,6 +582,171 @@ class AddLatticeCustom(bpy.types.Operator):
             bpy.ops.object.add(type="LATTICE")
 
         return {'FINISHED'}
+
+
+class AddDisplaceCustom(CustomModalOperator, bpy.types.Operator):
+    bl_idname = "object.custom_displace"
+    bl_label = "Add Custom Displace"
+    bl_options = {"REGISTER", "UNDO"}
+
+    strength: bpy.props.FloatProperty()
+    texture = bpy.props.StringProperty()
+    size: bpy.props.FloatProperty()
+    contrast: bpy.props.FloatProperty()
+
+    textures = ['Clouds', 'Musgrave', 'Voronoi', 'Wood']
+    current_texture_index = 0
+    is_rotating = False
+
+    @classmethod
+    def poll(cls, context):
+        obj = context.active_object
+        return obj is not None and obj.type == "MESH"
+
+    @property
+    def last_texture(self):
+        return bpy.data.textures[:][-1]
+
+    @property
+    def all_scene_disp_textures(self):
+        d_textures = []
+        for t in bpy.data.textures[:]:
+            try:
+                if t['is_displace']:
+                    d_textures.append(t)
+            except KeyError:
+                continue
+        return d_textures
+
+    def _init_textures(self):
+        ### delete this after testing
+        texts = bpy.data.textures[:]
+        for t in texts:
+            bpy.data.textures.remove(t)
+        ###
+        text_attrs = [t for t in self.textures if t]
+        for name in text_attrs:
+            bpy.ops.texture.new()
+            tex = self.last_texture
+            tex.name = f"Displace_{name}"
+            tex.type = name.upper()
+            tex['is_displace'] = True
+        self.current_texture = bpy.data.textures[self.current_texture_index]
+        self.mod.texture = self.current_texture
+
+    def _init_coords_empty(self):
+        bpy.ops.object.add(location=self.obj.location)
+        self.empty = self.get_last_added_object()
+        self.empty.name = "Displace_Coordinates"
+        self.empty.empty_display_size = 0.1
+        self.empty.empty_display_type = "SPHERE"
+
+    def _init_modifier(self, context):
+        context.view_layer.objects.active = self.obj
+        bpy.ops.object.modifier_add(type="DISPLACE")
+        self.mod = self._get_last_modifier()
+        self.mod.texture_coords = "OBJECT"
+        self.mod.texture_coords_object = self.empty
+        self.mod.strength = 0
+
+    def _new_texture_index(self, prev=False):
+        if prev:
+            addend = -1
+        else:
+            addend = 1
+        return (self.current_texture_index + addend) % len(self.all_scene_disp_textures)
+
+    def _switch_textures(self, prev=False):
+        new_index = self._new_texture_index(prev=prev)
+        self.current_texture_index = new_index
+        self.current_texture = self.all_scene_disp_textures[new_index]
+        self.mod.texture = self.current_texture
+
+    def init_tests(self, context):
+        for mod in self.obj.modifiers[:]:
+            if mod.type == "DISPLACE":
+                bpy.ops.object.modifier_remove(modifier=mod.name)
+        try:
+            mt = bpy.data.objects['Displace_Coordinates']
+            self.set_active_and_selected(context, mt)
+            self.set_active_and_selected(context, self.obj, selected=False)
+            bpy.ops.object.delete()
+            self.set_active_and_selected(context, self.obj)
+        except KeyError:
+            pass
+
+    def invoke(self, context, event):
+
+        self.init_x = event.mouse_x
+        self.init_y = event.mouse_y
+        self.obj = self.get_active_obj()
+        ### delete this after testing
+        self.init_tests(context)
+        ###
+
+        self.init_loc = self.obj.location
+        self._init_coords_empty()
+        self._init_modifier(context)
+        self._init_textures()
+        context.view_layer.objects.active = self.obj
+        self.obj.select_set(True)
+        context.window_manager.modal_handler_add(self)
+
+        return {"RUNNING_MODAL"}
+
+    def append_loc(
+        self,
+        event,
+        multiplier,
+    ):
+        location = []
+        for axis in list('xy'):
+            init_loc = getattr(self, f"init_{axis}")
+            mouse_loc = getattr(event, f"mouse_{axis}")
+            val = (init_loc - mouse_loc) * multiplier
+            loc = utils.clamp(val, -1, 1) * -1
+            location.append(val)
+        location.append(0.0)
+        self.empty.location = self.init_loc + Vector(location)
+
+    def modal(self, context, event):
+        if event.shift:
+            multiplier = 0.001
+        else:
+            multiplier = 0.01
+        if event.type == "R":
+            self.is_rotating = True
+        if self.is_rotating:
+            pass
+        if event.type == "MOUSEMOVE":
+            if event.alt:
+                self.append_loc(event, multiplier)
+            else:
+                val = (self.init_x - event.mouse_x) * multiplier
+                self.strength = utils.clamp(val, -3, 3)
+                self.mod.strength = self.strength
+        elif event.type in {"WHEELUPMOUSE", "WHEELDOWNMOUSE"}:
+            scale_mod = (multiplier * 10) + 1
+            if event.type == "WHEELUPMOUSE":
+                self.empty.scale *= scale_mod
+            else:
+                self.empty.scale /= scale_mod
+        elif event.value == "PRESS":
+            if event.type == "TAB":
+                if event.shift:
+                    self._switch_textures(prev=True)
+                else:
+                    self._switch_textures()
+        elif event.type == "LEFTMOUSE":
+            return {"FINISHED"}
+        elif event.type in {"RIGHTMOUSE", "ESC"}:
+            bpy.ops.object.modifier_remove(modifier=self.mod.name)
+            self.obj.select_set(False)
+            self.empty.select_set(True)
+            bpy.ops.object.delete()
+
+            return {"CANCELLED"}
+        return {"RUNNING_MODAL"}
 
 
 classes = {
@@ -568,4 +763,5 @@ classes = {
     SolidifyModalOperator,
     ScrewModalOperator,
     AddLatticeCustom,
+    AddDisplaceCustom,
 }

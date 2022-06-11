@@ -16,7 +16,7 @@ class CustomOperator:
 
     @staticmethod
     def get_last_added_object():
-        return bpy.context.scene.objects[:][-1]
+        return bpy.context.object
 
     def get_mod_and_target_objects(self):
         target = self.get_active_obj()
@@ -37,6 +37,10 @@ class CustomOperator:
     @property
     def last_constraint(obj):
         return obj.constraints[0]
+
+    def set_active_and_selected(self, context, obj, selected=True):
+        context.view_layer.objects.active = obj
+        obj.select_set(selected)
 
 
 class CustomModalOperator(CustomOperator):
@@ -92,6 +96,9 @@ class CustomModalOperator(CustomOperator):
         if self.numpad_value:
             msg += f" Input : {self.string_numpad_value}"
         context.area.header_text_set(msg)
+
+    def _clear_info(self, context):
+        context.area.header_text_set(None)
 
 
 classes = [CustomOperator, CustomModalOperator]
