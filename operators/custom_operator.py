@@ -1,4 +1,5 @@
 import bpy
+import blf
 
 
 class CustomOperator:
@@ -99,6 +100,24 @@ class CustomModalOperator(CustomOperator):
 
     def _clear_info(self, context):
         context.area.header_text_set(None)
+
+
+class ModalDrawText:
+    def __init__(self, context, msg):
+        self.msg = msg
+        self.handle = bpy.types.SpaceView3D.draw_handler_add(
+            self.draw_text_callback, (context,), 'WINDOW', 'POST_PIXEL'
+        )
+
+    def draw_text_callback(self, context):
+        font_id = 0
+        # draw some text
+        blf.position(font_id, 15, 50, 0)
+        blf.size(font_id, 20, 72)
+        blf.draw(font_id, "%s" % (self.msg))
+
+    def remove_handle(self):
+        bpy.types.SpaceView3D.draw_handler_remove(self.handle, 'WINDOW')
 
 
 classes = [CustomOperator, CustomModalOperator]
