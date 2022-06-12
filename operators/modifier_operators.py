@@ -596,15 +596,106 @@ class AddDisplaceCustom(CustomModalOperator, bpy.types.Operator):
 
     textures = ['Clouds', 'Musgrave', 'Voronoi', 'Wood']
     current_texture_index = 0
-    rot_axis = "x"
+    rot_axis = "z"
     texture_adjust_channel = None
-    texture_adjust_options = {
-        "D": "dimension_max",
-        "L": "lacunarity",
-        "O": "octaves",
-        "I": "noise_intensity",
-        "B": "intensity",
-        "C": "contrast",
+    inverted = 1
+
+    texture_properties = {
+        "MUSGRAVE": {
+            "basis": "noise_basis",
+            "type": "musgrave_type",
+            "basis_list": [
+                "BLENDER_ORIGINAL",
+                "VORONOI_F1",
+                "VORONOI_F2_F1",
+                "VORONOI_F2",
+                "VORONOI_F3",
+                "VORONOI_F4",
+                "ORIGINAL_PERLIN",
+                "VORONOI_CRACKLE",
+                "IMPROVED_PERLIN",
+                "CELL_NOISE",
+            ],
+            "type_list": [
+                "HETERO_TERRAIN",
+                "FBM",
+                "HYBRID_MULTIFRACTAL",
+                "RIDGED_MULTIFRACTAL",
+                "MULTIFRACTAL",
+            ],
+            "mod_channel": {
+                "D": "dimension_max",
+                "L": "lacunarity",
+                "O": "octaves",
+                "I": "noise_intensity",
+                "B": "intensity",
+                "C": "contrast",
+                "S": "noise_scale",
+            },
+        },
+        "CLOUDS": {
+            "basis": "noise_basis",
+            "type": "noise_type",
+            "basis_list": [
+                "BLENDER_ORIGINAL",
+                "VORONOI_F1",
+                "VORONOI_F2_F1",
+                "VORONOI_F2",
+                "VORONOI_F3",
+                "VORONOI_F4",
+                "ORIGINAL_PERLIN",
+                "VORONOI_CRACKLE",
+                "IMPROVED_PERLIN",
+                "CELL_NOISE",
+            ],
+            "type_list": ["SOFT_NOISE", "HARD_NOISE"],
+            "mod_channel": {
+                "B": "intensity",
+                "C": "contrast",
+                "S": "noise_scale",
+            },
+        },
+        "VORONOI": {
+            "basis": "distance_metric",
+            "type": "color_mode",
+            "basis_list": [
+                "DISTANCE",
+                "MANHATTAN",
+                "CHEBYCHEV",
+                "MINKOWSKI",
+            ],
+            "type_list": [
+                'POSITION',
+                'POSITION_OUTLINE',
+                'POSITION_OUTLINE_INTENSITY',
+                'INTENSITY',
+            ],
+            "mod_channel": {
+                "B": "intensity",
+                "C": "contrast",
+                "S": "noise_scale",
+            },
+        },
+        "WOOD": {
+            "basis": "noise_basis_2",
+            "type": "wood_type",
+            "basis_list": [
+                "SIN",
+                "SAW",
+                "TRI",
+            ],
+            "type_list": [
+                'RINGNOISE',
+                'BANDS',
+                'RINGS',
+                'BANDNOISE',
+            ],
+            "mod_channel": {
+                "B": "intensity",
+                "C": "contrast",
+                "S": "noise_scale",
+            },
+        },
     }
 
     @classmethod
@@ -615,6 +706,19 @@ class AddDisplaceCustom(CustomModalOperator, bpy.types.Operator):
     @property
     def last_texture(self):
         return bpy.data.textures[:][-1]
+
+    # @property
+    # def text_is_musgrave(self):
+    #     return self.current_texture.type == "MUSGRAVE"
+    #
+    # @property
+    # def chan_is_musgrave(self):
+    #     return self.texture_adjust_channel in list("DOIL")
+
+    @property
+    def curr_text_props(self):
+        type = self.current_texture.type
+        return self.texture_properties[type]
 
     @property
     def all_scene_disp_textures(self):
@@ -672,14 +776,12 @@ class AddDisplaceCustom(CustomModalOperator, bpy.types.Operator):
             pass
 
     def invoke(self, context, event):
-
         self.init_x = event.mouse_x
         self.init_y = event.mouse_y
         self.obj = self.get_active_obj()
         ### delete this after testing
         self.init_tests(context)
         ###
-
         self.init_loc = self.obj.location
         self.init_rot = 0
         self._init_coords_empty()
@@ -692,9 +794,28 @@ class AddDisplaceCustom(CustomModalOperator, bpy.types.Operator):
         return {"RUNNING_MODAL"}
 
     def generate_msg(self):
-        lines = [f"ROTATION AXIS: {self.rot_axis.upper()}", "SCALE: {self.empty.scale.xyz}, {tac_msg}"]
-        if self.texture_adjust_channel is not None:
-            chan = self.texture_adjust_options[self.texture_adjust_channel].upper().replace("_", " ")
+        def get_float_fmt(items):
+            return ', '.join([f"{amt:.2f}" for amt in items])
+
+        rot_ax = self.rot_axis.upper()
+        rot_amt = get_float_fmt(self.empty.rotation_euler)
+        scale = get_float_fmt(self.empty.scale)[0]
+        c_text = self.current_texture.type
+        c_name = self.current_texture.name
+        lines = [
+            "MOVE: ALT",
+            "ROTATE: CTRL",
+            "SCALE: MOUSEWHEEL",
+            f"ROTATION AXIS: {rot_ax}",
+            f"ROTATION: {rot_amt}",
+            f"SCALE: {scale}",
+            f"TEXTURE_TYPE: {c_text}",
+            f"TEXTURE_NAME: {c_name}",
+        ]
+        mod = self.mod_channel
+
+        if mod is not None:
+            chan = mod.upper().replace("_", " ")
             tac_msg = f"ADJUST CHANNEL: {chan}"
             lines.append(tac_msg)
         return ', '.join(lines)
@@ -705,7 +826,7 @@ class AddDisplaceCustom(CustomModalOperator, bpy.types.Operator):
             init_loc = getattr(self, f"init_{axis}")
             mouse_loc = getattr(event, f"mouse_{axis}")
             val = (init_loc - mouse_loc) * multiplier
-            loc = utils.clamp(val, -clamp_range, clamp_range) * -1
+            loc = utils.clamp(val, -clamp_range, clamp_range)
             location.append(val)
         location.append(0.0)
         return Vector(location)
@@ -723,34 +844,68 @@ class AddDisplaceCustom(CustomModalOperator, bpy.types.Operator):
         self.current_texture = self.all_scene_disp_textures[new_index]
         self.mod.texture = self.current_texture
 
+    def set_adj_chan(self, channel=None):
+        if self.texture_adjust_channel is None:
+            self.texture_adjust_channel = channel
+        elif self.mod_channel is None:
+            self.texture_adjust_channel = None
+        else:
+            self.texture_adjust_channel = channel
+
+    @property
+    def mod_channel(self):
+        props = self.curr_text_props
+        opts = props["mod_channel"]
+        channel = self.texture_adjust_channel
+        try:
+            return opts[channel]
+        except KeyError:
+            return None
+
+    def adjust_channel(self, val):
+        if self.mod_channel is not None:
+            new_val = getattr(self.current_texture, self.mod_channel) + (val.x * 0.1)
+            setattr(self.current_texture, self.mod_channel, new_val)
+
+    def change_texture_attr(self, attr_type="basis", prev=False):
+        if prev:
+            addend = -1
+        else:
+            addend = 1
+        type = self.current_texture.type
+        text = self.texture_properties[type]
+        attr = text[attr_type]
+        attr_list = self.texture_properties[type][f"{attr_type}_list"]
+        current_attr = getattr(self.current_texture, attr)
+        curr_index = attr_list.index(current_attr)
+        new_index = (curr_index + addend) % len(attr_list)
+        new_attr = attr_list[new_index]
+        setattr(self.current_texture, attr, new_attr)
+
     def modal(self, context, event):
+
         msg = self.generate_msg()
         self.display_modal_info(msg, context)
-
         if event.shift:
             multiplier = 0.001
         else:
             multiplier = 0.01
-
+        self.mod.strength = self.strength * self.inverted
         if event.type == "MOUSEMOVE":
-
+            print(self.texture_adjust_channel)
             val = self.get_mouse_val(event, multiplier)
-            if self.texture_adjust_channel is not None:
-                mod_channel = self.texture_adjust_options[self.texture_adjust_channel]
-                if self.texture_adjust_channel in list('DOIL'):
-                    if self.current_texture.type != "MUSGRAVE":
-                        return {"RUNNING_MODAL"}
-                new_val = getattr(self.current_texture, mod_channel) + val.x
-                setattr(self.current_texture, mod_channel, new_val)
-
+            self.adjust_channel(val)
             if event.alt:
+                self.set_adj_chan()
                 self.empty.location = self.init_loc + val
             elif event.ctrl:
+                self.set_adj_chan()
                 setattr(self.empty.rotation_euler, self.rot_axis, self.init_rot + val[0])
             else:
                 val = (self.init_x - event.mouse_x) * multiplier
                 self.strength = utils.clamp(val, -3, 3)
-                self.mod.strength = self.strength
+
+        # MOUSEWHEEL ADJUST SCALE
         elif event.type in {"WHEELUPMOUSE", "WHEELDOWNMOUSE"}:
             scale_mod = (multiplier * 10) + 1
             if event.type == "WHEELUPMOUSE":
@@ -758,24 +913,34 @@ class AddDisplaceCustom(CustomModalOperator, bpy.types.Operator):
             else:
                 self.empty.scale /= scale_mod
         elif event.value == "PRESS":
+            prev = False
+            if event.shift:
+                prev = True
+            # SWITCH TEXTURE TYPE
             if event.type == "TAB":
-                if event.shift:
-                    self._switch_textures(prev=True)
-                else:
-                    self._switch_textures()
+                self._switch_textures(prev=prev)
+            elif event.type == "Q":
+                self.change_texture_attr(prev=prev)
+            elif event.type == "W":
+                self.change_texture_attr(attr_type="type", prev=prev)
+            # CHANGE ROTATION AXIS
             elif event.type in list("XYZ"):
                 self.rot_axis = event.unicode.lower()
-            elif event.type in list("BCDOLI"):
+            # CHANGE TEXTURE ADJUST CHANNEL
+            elif event.type in list("BCDOLIST"):
                 if self.texture_adjust_channel == event.type:
-                    self.texture_adjust_channel = None
+                    self.set_adj_chan()
                 else:
-                    self.texture_adjust_channel = event.type
+                    self.set_adj_chan(event.type)
+            # INVERT STRENGTH
+            elif event.type == "N":
+                self.inverted *= -1
 
         elif event.type == "LEFTMOUSE":
-            self._clear_info()
+            self._clear_info(context)
             return {"FINISHED"}
         elif event.type in {"RIGHTMOUSE", "ESC"}:
-            self._clear_info()
+            self._clear_info(context)
             bpy.ops.object.modifier_remove(modifier=self.mod.name)
             self.obj.select_set(False)
             self.empty.select_set(True)
