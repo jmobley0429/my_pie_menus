@@ -18,6 +18,7 @@ if "bpy" in locals():
     importlib.reload(edit_mode_operators)
     importlib.reload(object_mode_operators)
     importlib.reload(node_editor_operators)
+    importlib.reload(sculpt_mode_operators)
 
     importlib.reload(add_pies)
     importlib.reload(edit_mode_pies)
@@ -34,6 +35,7 @@ else:
     from my_pie_menus.operators import edit_mode_operators
     from my_pie_menus.operators import object_mode_operators
     from my_pie_menus.operators import node_editor_operators
+    from my_pie_menus.operators import sculpt_mode_operators
 
     from my_pie_menus.pies import add_pies
     from my_pie_menus.pies import edit_mode_pies
@@ -53,6 +55,7 @@ modules = [
     add_pies,
     edit_mode_pies,
     object_mode_pies,
+    sculpt_mode_operators,
 ]
 
 classes = [cls for module in modules for cls in module.classes]

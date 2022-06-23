@@ -142,13 +142,12 @@ class MESH_OT_set_edge_weight(CustomOperator, bpy.types.Operator):
 
     @classmethod
     def bmesh(cls, context):
-        bpy.ops.object.mode_set(mode='OBJECT')
-        bpy.ops.object.mode_set(mode='EDIT')
+        # bpy.ops.object.mode_set(mode='OBJECT')
         me = context.edit_object.data
-        bm = bmesh.from_edit_mesh(me)
-        cls.bm = bm
+        cls.bm = bmesh.from_edit_mesh(me)
 
     def invoke(self, context, event):
+        bpy.ops.object.mode_set(mode='EDIT')
         self.bmesh(context)
         return self.execute(context)
 
@@ -163,7 +162,7 @@ class MESH_OT_set_edge_weight(CustomOperator, bpy.types.Operator):
             edge[weight_layer] = self.edge_weight
 
         bmesh.update_edit_mesh(context.edit_object.data)
-
+        self.bm.free()
         return {"FINISHED"}
 
 

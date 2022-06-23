@@ -8,7 +8,7 @@ class NODE_OT_node_align_right(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        return context.area.type == "NODE_EDITOR"
+        return context.area.type == "NODE_EDITOR" and bool(context.selected_nodes)
 
     def execute(self, context):
         sel_nodes = context.selected_nodes

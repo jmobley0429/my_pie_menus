@@ -2,6 +2,7 @@ import bpy
 import bmesh
 import math
 import json
+import re
 from mathutils import Euler
 
 from pathlib import Path
@@ -100,7 +101,70 @@ class AddLightSetup(CustomOperator, bpy.types.Operator):
         self.layout.operator(self.bl_idname, text=self.bl_label)
 
 
+class SetCustomBatchName(bpy.types.Operator):
+
+    bl_idname = "object.set_custom_batch_name"
+    bl_label = "Set Custom Batch Name"
+
+    name_string: bpy.props.StringProperty(name="New Name")
+
+    @classmethod
+    def poll(cls, context):
+        return context.active_object is not None
+
+    def invoke(self, context, event):
+        return context.window_manager.invoke_props_dialog(self)
+
+    def execute(self, context):
+        objs = context.selected_objects
+        for obj in objs:
+            obj.name = self.name_string
+        for obj in objs:
+            obj.name = obj.name.replace('.0', "_")
+        return {'FINISHED'}
+
+
+class JG_SetUVChannels(bpy.types.Operator):
+
+    bl_idname = "object.jg_set_uv_channels"
+    bl_label = "Set JG UV Channels"
+
+    @classmethod
+    def poll(cls, context):
+        return context.active_object is not None
+
+    def execute(self, context):
+        objs = context.selected_objects
+        obj_data = []
+        for obj in objs:
+            bpy.context.view_layer.objects.active = obj
+            mesh = obj.data
+            uvs = mesh.uv_layers
+            for i, u in enumerate(uvs):
+                if i > 0:
+                    mesh.uv_layers.active_index = i
+                    bpy.ops.mesh.uv_texture_remove()
+
+        for obj in objs:
+            mesh = obj.data
+            if mesh not in obj_data:
+                obj_data.append(mesh)
+                bpy.context.view_layer.objects.active = obj
+                bpy.ops.mesh.uv_texture_add()
+                uvs = mesh.uv_layers
+                for i, u in reversed(list(enumerate(uvs))):
+                    name = f"UV_Channel_{i+1}"
+                    u.name = name
+            else:
+                continue
+
+        return {'FINISHED'}
+
+
 classes = (
     AddCameraCustom,
     AddLightSetup,
+    SetCustomBatchName,
+    # delete later
+    JG_SetUVChannels,
 )

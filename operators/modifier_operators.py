@@ -729,9 +729,7 @@ class AddDisplaceCustom(CustomModalOperator, bpy.types.Operator):
 
     def _init_textures(self):
         ### delete this after testing
-        texts = bpy.data.textures[:]
-        for t in texts:
-            bpy.data.textures.remove(t)
+
         ###
         text_attrs = [t for t in self.textures if t]
         for name in text_attrs:
@@ -748,7 +746,6 @@ class AddDisplaceCustom(CustomModalOperator, bpy.types.Operator):
                 self.texture_properties[textype]['default_vals'][chan] = val
         self.current_texture = bpy.data.textures[self.current_texture_index]
         self.mod.texture = self.current_texture
-        print(self.texture_properties)
 
     def _init_coords_empty(self):
         bpy.ops.object.add(location=self.obj.location)
@@ -766,6 +763,9 @@ class AddDisplaceCustom(CustomModalOperator, bpy.types.Operator):
         self.mod.strength = 0
 
     def init_tests(self, context):
+        texts = bpy.data.textures[:]
+        for t in texts:
+            bpy.data.textures.remove(t)
         for mod in self.obj.modifiers[:]:
             if mod.type == "DISPLACE":
                 bpy.ops.object.modifier_remove(modifier=mod.name)
@@ -783,7 +783,7 @@ class AddDisplaceCustom(CustomModalOperator, bpy.types.Operator):
         self.init_y = event.mouse_y
         self.obj = self.get_active_obj()
         ### delete this after testing
-        self.init_tests(context)
+        # self.init_tests(context)
         ###
         self.init_loc = self.obj.location
         self.init_rot = 0
