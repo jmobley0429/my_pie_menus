@@ -9,117 +9,192 @@ bl_info = {
 }
 
 
+def db_block(area: str):
+    print(f"{area}\n" * 3)
+
+
+KMS = [
+    {
+        "name": "3D View",
+        "letter": "A",
+        "class": "PIE_MT_AddMesh",
+        "shift": 1,
+        "ctrl": 0,
+        "alt": 0,
+        "space_type": "VIEW_3D",
+        "region_type": "WINDOW",
+    },
+    {
+        "name": "Mesh",
+        "letter": "A",
+        "class": "PIE_MT_AddMesh",
+        "shift": 1,
+        "ctrl": 0,
+        "alt": 0,
+        "space_type": "VIEW_3D",
+        "region_type": "WINDOW",
+    },
+    {
+        "name": "3D View",
+        "letter": "A",
+        "class": "PIE_MT_AddOtherObjects",
+        "shift": 1,
+        "ctrl": 1,
+        "alt": 0,
+        "space_type": "VIEW_3D",
+        "region_type": "WINDOW",
+    },
+    {
+        "name": "Mesh",
+        "letter": "X",
+        "class": "mesh.reduce_cylinder",
+        "shift": 1,
+        "ctrl": 0,
+        "alt": 1,
+        "space_type": "VIEW_3D",
+        "region_type": "WINDOW",
+    },
+    {
+        "name": "3D View Generic",
+        "letter": "Q",
+        "class": "PIE_MT_AddModifier",
+        "shift": 1,
+        "ctrl": 1,
+        "alt": 0,
+        "space_type": "VIEW_3D",
+        "region_type": "WINDOW",
+    },
+    {
+        "name": "Object Mode",
+        "letter": "C",
+        "class": "PIE_MT_ConvertMeshCurve",
+        "shift": 0,
+        "ctrl": 0,
+        "alt": 1,
+        "space_type": "VIEW_3D",
+        "region_type": "WINDOW",
+    },
+    {
+        "name": "Node Editor",
+        "letter": "W",
+        "class": "NODE_OT_node_align_top",
+        "shift": 1,
+        "ctrl": 0,
+        "alt": 1,
+        "space_type": "NODE_EDITOR",
+        "region_type": "WINDOW",
+    },
+    {
+        "name": "Node Editor",
+        "letter": "S",
+        "class": "NODE_OT_node_align_bottom",
+        "shift": 1,
+        "ctrl": 0,
+        "alt": 1,
+        "space_type": "NODE_EDITOR",
+        "region_type": "WINDOW",
+    },
+    {
+        "name": "Node Editor",
+        "letter": "D",
+        "class": "NODE_OT_node_align_right",
+        "shift": 1,
+        "ctrl": 0,
+        "alt": 1,
+        "space_type": "NODE_EDITOR",
+        "region_type": "WINDOW",
+    },
+    {
+        "name": "Node Editor",
+        "letter": "A",
+        "class": "NODE_OT_node_align_left",
+        "shift": 1,
+        "ctrl": 0,
+        "alt": 1,
+        "space_type": "NODE_EDITOR",
+        "region_type": "WINDOW",
+    },
+]
+
+
 if "bpy" in locals():
     import importlib
 
-    importlib.reload(mesh_add_pie)
-    importlib.reload(other_objects_pie)
-    importlib.reload(utils)
-    importlib.reload(add_modifier)
-    importlib.reload(custom_modifier_operators)
     importlib.reload(custom_operator)
-    importlib.reload(convert_mesh_curve)
-    importlib.reload(keymap_settings)
+    importlib.reload(modifier_operators)
     importlib.reload(add_mesh_operators)
-    importlib.reload(snap_pie)
-    importlib.reload(edit_mesh_operators)
-    importlib.reload(lighting_setup)
-    importlib.reload(edge_pie_menu)
-    importlib.reload(object_io_pie)
-    importlib.reload(quick_increase_cylinder_edges)
+    importlib.reload(edit_mode_operators)
+    importlib.reload(object_mode_operators)
+    importlib.reload(node_editor_operators)
+    importlib.reload(sculpt_mode_operators)
+
+    importlib.reload(add_pies)
+    importlib.reload(edit_mode_pies)
+    importlib.reload(object_mode_pies)
 
 else:
     import bpy
-    from my_pie_menus import custom_modifier_operators
-    from my_pie_menus import mesh_add_pie
-    from my_pie_menus import other_objects_pie
-    from my_pie_menus import convert_mesh_curve
-    from my_pie_menus import add_modifier
-    from my_pie_menus import utils
-    from my_pie_menus import custom_operator
-    from my_pie_menus import add_mesh_operators
-    from my_pie_menus import keymap_settings
-    from my_pie_menus import snap_pie
-    from my_pie_menus import edit_mesh_operators
-    from my_pie_menus import lighting_setup
-    from my_pie_menus import edge_pie_menu
-    from my_pie_menus import object_io_pie
-    from my_pie_menus import select_linked_pie
-    from my_pie_menus import quick_increase_cylinder_edges
+    from my_pie_menus.resources import utils
 
-KMS = keymap_settings.KEYMAP_SETTINGS
+    from my_pie_menus.operators import custom_operator
+    from my_pie_menus.operators import modifier_operators
+    from my_pie_menus.operators import add_mesh_operators
+    from my_pie_menus.operators import edit_mode_operators
+    from my_pie_menus.operators import object_mode_operators
+    from my_pie_menus.operators import node_editor_operators
+    from my_pie_menus.operators import sculpt_mode_operators
 
-classes = (
-    # make sure dependency classes go first
-    utils.AddCameraCustom,
-    utils.AddLatticeCustom,
-    utils.AddMannequin,
-    add_mesh_operators.AddCustomMeshOperator,
-    custom_modifier_operators.CustomAddMirrorModifier,
-    custom_modifier_operators.CustomAddBevelModifier,
-    custom_modifier_operators.CustomAddQuickBevSubSurfModifier,
-    custom_modifier_operators.CustomSimpleDeform,
-    custom_modifier_operators.CustomShrinkwrap,
-    custom_modifier_operators.CustomLattice,
-    custom_modifier_operators.CustomRemesh,
-    custom_modifier_operators.CustomDecimate,
-    custom_modifier_operators.ArrayModalOperator,
-    custom_modifier_operators.SolidifyModalOperator,
-    custom_modifier_operators.ScrewModalOperator,
-    edit_mesh_operators.MESH_OT_reduce_cylinder,
-    edit_mesh_operators.BoundaryToSeam,
-    edit_mesh_operators.MESH_OT_increase_cylinder_res,
-    lighting_setup.AddLightSetup,
-    snap_pie.SetSnap,
-    add_modifier.PIE_MT_ParticleSubPie,
-    add_modifier.PIE_MT_MeshSubPie,
-    add_modifier.PIE_MT_NormalSubPie,
-    add_modifier.PIE_MT_AddModifier,
-    mesh_add_pie.PIE_MT_AddMesh,
-    other_objects_pie.PIE_MT_AddOtherObjects,
-    snap_pie.PIE_MT_SnapOptions,
-    convert_mesh_curve.PIE_MT_ConvertMeshCurve,
-    edge_pie_menu.PIE_MT_edge_menu,
-    object_io_pie.OBJECT_MT_object_io_menu,
-    select_linked_pie.MESH_MT_select_linked_pie,
-    quick_increase_cylinder_edges.OBJECT_OT_increase_cylinder_res,
-)
+    from my_pie_menus.pies import add_pies
+    from my_pie_menus.pies import edit_mode_pies
+    from my_pie_menus.pies import object_mode_pies
+
+
+modules = [
+    modifier_operators,
+    add_mesh_operators,
+    edit_mode_operators,
+    object_mode_operators,
+    node_editor_operators,
+    add_pies,
+    edit_mode_pies,
+    object_mode_pies,
+    sculpt_mode_operators,
+]
+
+classes = [cls for module in modules for cls in module.classes]
+classes.sort(key=lambda cls: cls.bl_idname)
 
 addon_keymaps = []
 
 
 def register():
     for cls in classes:
+        try:
+            bpy.utils.unregister_class(cls)
+        except RuntimeError:
+            pass
         bpy.utils.register_class(cls)
+    wm = bpy.context.window_manager
     for setting in KMS:
-        name, letter, class_name, shift, ctrl, alt, space_type = list(setting.values())
+        name, letter, class_name, shift, ctrl, alt, space_type, region_type = list(setting.values())
         wm = bpy.context.window_manager
-        default_kms = wm.keyconfigs.default.keymaps
-        wm = bpy.context.window_manager
-        if wm.keyconfigs.addon:
-            # adding space type makes it work ???
-            km = wm.keyconfigs.addon.keymaps.new(name=name, space_type=space_type)
-            kmi = km.keymap_items.new('wm.call_menu_pie', letter, 'PRESS', alt=alt, shift=shift, ctrl=ctrl)
-            kmi_string = kmi.to_string()
-            for keymap in default_kms[name].keymap_items:
-                dkm_string = keymap.to_string()
-                if kmi_string == dkm_string:
-                    keymap.active = False
-
-            kmi.properties.name = class_name
-            addon_keymaps.append((km, kmi))
+        kc = wm.keyconfigs.addon
+        km = kc.keymaps.new(name=name, space_type=space_type, region_type=region_type)
+        kmi = km.keymap_items.new('wm.call_menu_pie', letter, 'PRESS', shift=shift, ctrl=ctrl, alt=alt)
+        kmi.properties.name = class_name
+        kmi.active = True
+        addon_keymaps.append((km, kmi))
 
 
 def unregister():
-
+    for cls in reversed(classes):
+        bpy.utils.unregister_class(cls)
     wm = bpy.context.window_manager
     kc = wm.keyconfigs.addon
     if kc:
         for km, kmi in addon_keymaps:
             km.keymap_items.remove(kmi)
     addon_keymaps.clear()
-    for cls in reversed(classes):
-        bpy.utils.unregister_class(cls)
 
 
 if __name__ == "__main__":
