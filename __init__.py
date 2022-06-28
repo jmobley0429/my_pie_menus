@@ -189,6 +189,10 @@ def register():
 def unregister():
     for cls in reversed(classes):
         bpy.utils.unregister_class(cls)
+<<<<<<< HEAD
+=======
+
+>>>>>>> condense_scripts
     wm = bpy.context.window_manager
     kc = wm.keyconfigs.addon
     if kc:
@@ -198,4 +202,5 @@ def unregister():
 
 
 if __name__ == "__main__":
+
     register()

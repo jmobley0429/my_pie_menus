@@ -1,6 +1,17 @@
 import bpy
 from bpy.types import Menu
-<<<<<<< HEAD
+
+
+class PIE_MT_ConvertMeshCurve(Menu):
+    # label is displayed at the center of the pie menu.
+    bl_label = "Convert Mesh/Curve"
+    bl_idname = "PIE_MT_ConvertMeshCurve"
+
+    def draw(self, context):
+        layout = self.layout
+
+        pie = layout.menu_pie()
+        pie.operator_enum("object.convert", "target")
 
 
 class OBJECT_MT_object_io_menu(Menu):
@@ -16,15 +27,7 @@ class OBJECT_MT_object_io_menu(Menu):
         pie.operator("export_scene.obj", text="Export OBJ")
 
 
-def register():
-    bpy.utils.register_class(OBJECT_MT_object_io_menu)
-
-
-def unregister():
-    bpy.utils.unregister_class(OBJECT_MT_object_io_menu)
-
-
-if __name__ == "__main__":
-    register()
-=======
->>>>>>> condense_scripts
+classes = (
+    PIE_MT_ConvertMeshCurve,
+    OBJECT_MT_object_io_menu,
+)

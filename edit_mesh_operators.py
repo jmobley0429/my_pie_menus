@@ -19,6 +19,7 @@ class MESH_OT_reduce_cylinder(bpy.types.Operator):
         return {'FINISHED'}
 
 
+<<<<<<< HEAD
 class BoundaryToSeam(bpy.types.Operator):
     bl_idname = "mesh.boundary_to_seam"
     bl_label = "Boundary to Seam"
@@ -84,3 +85,6 @@ class MESH_OT_increase_cylinder_res(bpy.types.Operator):
         obj = context.active_object
         self.simplify_mesh()
         return {'FINISHED'}
+=======
+classes = MESH_OT_reduce_cylinder
+>>>>>>> condense_scripts

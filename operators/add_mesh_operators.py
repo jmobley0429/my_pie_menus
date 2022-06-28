@@ -1,4 +1,6 @@
 import bpy
+from mathutils import Euler
+import json
 
 from pathlib import Path
 
@@ -10,7 +12,7 @@ class AddMannequin(bpy.types.Operator):
     bl_label = "Mannequin"
     bl_options = {"REGISTER", "UNDO"}
 
-    PARENT_DIR = Path(__file__).parent
+    PARENT_DIR = Path(__file__).parent.parent
     file_path = PARENT_DIR / "resources" / 'mannequin.json'
 
     @property
@@ -45,14 +47,15 @@ class AddMannequin(bpy.types.Operator):
         obj.dimensions *= multiplier
 
     @staticmethod
-    def _place_in_scene(obj):
-        bpy.context.collection.objects.link(obj)
-        bpy.context.view_layer.objects.active = obj
+    def _place_in_scene(obj, context):
+        context.collection.objects.link(obj)
+        context.view_layer.objects.active = obj
         bpy.context.object.select_set(True)
-        ob_ops.transform_apply(location=True, rotation=True, scale=True)
-        ob_ops.origin_set(type='ORIGIN_GEOMETRY', center='MEDIAN')
-        ob_ops.shade_smooth()
-        ob_ops.pivotobottom()
+
+        bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+        bpy.ops.object.origin_set(type='ORIGIN_GEOMETRY', center='MEDIAN')
+        bpy.ops.object.shade_smooth()
+        bpy.ops.object.pivotobottom()
         cursor_loc = bpy.context.scene.cursor.location
         obj.location = cursor_loc
 
@@ -61,5 +64,10 @@ class AddMannequin(bpy.types.Operator):
         bpy.data.objects.new(self.mannequin_name, mesh)
         obj = bpy.data.objects[self.mannequin_name]
         self._handle_transforms(obj)
-        self._place_in_scene(obj)
+        self._place_in_scene(obj, context)
         return {'FINISHED'}
+
+
+classes = [
+    AddMannequin,
+]

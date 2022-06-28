@@ -4,12 +4,6 @@ import math
 import json
 from mathutils import Euler
 
-from pathlib import Path
-
-ob_ops = bpy.ops.object
-
-PARENT_DIR = Path(__file__).parent
-
 
 def get_active_obj(context):
     return context.active_object
@@ -17,6 +11,7 @@ def get_active_obj(context):
 
 def clamp(value, min_num, max_num):
     return min(max_num, max(min_num, value))
+<<<<<<< HEAD
 
 
 class AddCameraCustom(bpy.types.Operator):
@@ -129,3 +124,5 @@ class AddLatticeCustom(bpy.types.Operator):
             bpy.ops.object.add(type="LATTICE")
 
         return {'FINISHED'}
+=======
+>>>>>>> condense_scripts

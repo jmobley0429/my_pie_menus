@@ -1,7 +1,27 @@
 import bpy
-from .custom_operator import CustomOperator
-from bpy import context as C, data as D, ops as O
-<<<<<<< HEAD
+import bmesh
+import math
+import json
+from mathutils import Euler
+
+from pathlib import Path
+
+
+class AddCameraCustom(bpy.types.Operator):
+    bl_idname = "object.smart_add_camera"
+    bl_label = "Smart Add Camera"
+    bl_options = {"REGISTER", "UNDO"}
+
+    def execute(self, context):
+        bpy.ops.object.camera_add(
+            enter_editmode=False,
+            align='VIEW',
+            location=(0, 0, 0),
+            rotation=(1.33911, 0.0142096, -0.524513),
+            scale=(1, 1, 1),
+        )
+        bpy.ops.view3d.camera_to_view()
+        return {'FINISHED'}
 
 
 class AddLightSetup(CustomOperator, bpy.types.Operator):
@@ -16,22 +36,22 @@ class AddLightSetup(CustomOperator, bpy.types.Operator):
         lights.append(bpy.data.objects[-1])
 
     @staticmethod
-    def add_light(context, location, name, energy, target_obj, color, size):
+    def add_light(location, name, energy, target_obj, color, size):
         bpy.ops.object.light_add(type="AREA", location=location)
         key = last_light()
         key.name = name
         key.energy = energy
         key.color = color
         key.size = size
-        light_obj = context.object
+        light_obj = bpy.context.objectz
         light_obj.constraints.new(type="TRACK_TO")
         mod = last_constraint(light_obj)
         mod.target = obj
 
     def execute(self, context):
-        obj = self.get_active_obj(context)
+        obj = self.get_active_obj()
         bpy.ops.object.empty_add(type="CIRCLE", location=obj.location)
-        track_obj = self.get_active_obj(context)
+        track_obj = self.get_active_obj()
         track_obj.name = "Tracker"
 
         obj_w, obj_d, obj_h = obj.dimensions
@@ -76,5 +96,9 @@ class AddLightSetup(CustomOperator, bpy.types.Operator):
 
     def menu_func(self, context):
         self.layout.operator(self.bl_idname, text=self.bl_label)
-=======
->>>>>>> condense_scripts
+
+
+classes = (
+    AddCameraCustom,
+    AddLightSetup,
+)
