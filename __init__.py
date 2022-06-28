@@ -9,6 +9,114 @@ bl_info = {
 }
 
 
+def db_block(area: str):
+    print(f"{area}\n" * 3)
+
+
+KMS = [
+    {
+        "name": "3D View",
+        "letter": "A",
+        "class": "PIE_MT_AddMesh",
+        "shift": 1,
+        "ctrl": 0,
+        "alt": 0,
+        "space_type": "VIEW_3D",
+        "region_type": "WINDOW",
+    },
+    {
+        "name": "Mesh",
+        "letter": "A",
+        "class": "PIE_MT_AddMesh",
+        "shift": 1,
+        "ctrl": 0,
+        "alt": 0,
+        "space_type": "VIEW_3D",
+        "region_type": "WINDOW",
+    },
+    {
+        "name": "3D View",
+        "letter": "A",
+        "class": "PIE_MT_AddOtherObjects",
+        "shift": 1,
+        "ctrl": 1,
+        "alt": 0,
+        "space_type": "VIEW_3D",
+        "region_type": "WINDOW",
+    },
+    {
+        "name": "Mesh",
+        "letter": "X",
+        "class": "mesh.reduce_cylinder",
+        "shift": 1,
+        "ctrl": 0,
+        "alt": 1,
+        "space_type": "VIEW_3D",
+        "region_type": "WINDOW",
+    },
+    {
+        "name": "3D View Generic",
+        "letter": "Q",
+        "class": "PIE_MT_AddModifier",
+        "shift": 1,
+        "ctrl": 1,
+        "alt": 0,
+        "space_type": "VIEW_3D",
+        "region_type": "WINDOW",
+    },
+    {
+        "name": "Object Mode",
+        "letter": "C",
+        "class": "PIE_MT_ConvertMeshCurve",
+        "shift": 0,
+        "ctrl": 0,
+        "alt": 1,
+        "space_type": "VIEW_3D",
+        "region_type": "WINDOW",
+    },
+    {
+        "name": "Node Editor",
+        "letter": "W",
+        "class": "NODE_OT_node_align_top",
+        "shift": 1,
+        "ctrl": 0,
+        "alt": 1,
+        "space_type": "NODE_EDITOR",
+        "region_type": "WINDOW",
+    },
+    {
+        "name": "Node Editor",
+        "letter": "S",
+        "class": "NODE_OT_node_align_bottom",
+        "shift": 1,
+        "ctrl": 0,
+        "alt": 1,
+        "space_type": "NODE_EDITOR",
+        "region_type": "WINDOW",
+    },
+    {
+        "name": "Node Editor",
+        "letter": "D",
+        "class": "NODE_OT_node_align_right",
+        "shift": 1,
+        "ctrl": 0,
+        "alt": 1,
+        "space_type": "NODE_EDITOR",
+        "region_type": "WINDOW",
+    },
+    {
+        "name": "Node Editor",
+        "letter": "A",
+        "class": "NODE_OT_node_align_left",
+        "shift": 1,
+        "ctrl": 0,
+        "alt": 1,
+        "space_type": "NODE_EDITOR",
+        "region_type": "WINDOW",
+    },
+]
+
+
 if "bpy" in locals():
     import importlib
 
@@ -27,7 +135,6 @@ if "bpy" in locals():
 else:
     import bpy
     from my_pie_menus.resources import utils
-    from my_pie_menus.conf import keymap_settings
 
     from my_pie_menus.operators import custom_operator
     from my_pie_menus.operators import modifier_operators
@@ -42,10 +149,6 @@ else:
     from my_pie_menus.pies import object_mode_pies
 
 
-KMS = keymap_settings.KEYMAP_SETTINGS
-
-
-addon_keymaps = []
 modules = [
     modifier_operators,
     add_mesh_operators,
@@ -61,6 +164,8 @@ modules = [
 classes = [cls for module in modules for cls in module.classes]
 classes.sort(key=lambda cls: cls.bl_idname)
 
+addon_keymaps = []
+
 
 def register():
     for cls in classes:
@@ -69,35 +174,30 @@ def register():
         except RuntimeError:
             pass
         bpy.utils.register_class(cls)
-
+    wm = bpy.context.window_manager
     for setting in KMS:
-        name, letter, class_name, shift, ctrl, alt, space_type = list(setting.values())
+        name, letter, class_name, shift, ctrl, alt, space_type, region_type = list(setting.values())
         wm = bpy.context.window_manager
-        default_kms = wm.keyconfigs.default.keymaps
-        wm = bpy.context.window_manager
-        if wm.keyconfigs.addon:
-            km = wm.keyconfigs.addon.keymaps.new(name=name, space_type=space_type)
-            kmi = km.keymap_items.new('wm.call_menu_pie', letter, 'PRESS', alt=alt, shift=shift, ctrl=ctrl)
-            kmi_string = kmi.to_string()
-            for keymap in default_kms[name].keymap_items:
-                dkm_string = keymap.to_string()
-                if kmi_string == dkm_string:
-                    keymap.active = False
-
-            kmi.properties.name = class_name
-            addon_keymaps.append((km, kmi))
+        kc = wm.keyconfigs.addon
+        km = kc.keymaps.new(name=name, space_type=space_type, region_type=region_type)
+        kmi = km.keymap_items.new('wm.call_menu_pie', letter, 'PRESS', shift=shift, ctrl=ctrl, alt=alt)
+        kmi.properties.name = class_name
+        kmi.active = True
+        addon_keymaps.append((km, kmi))
 
 
 def unregister():
+    for cls in reversed(classes):
+        bpy.utils.unregister_class(cls)
+
     wm = bpy.context.window_manager
     kc = wm.keyconfigs.addon
     if kc:
         for km, kmi in addon_keymaps:
             km.keymap_items.remove(kmi)
     addon_keymaps.clear()
-    for cls in reversed(classes):
-        bpy.utils.unregister_class(cls)
 
 
 if __name__ == "__main__":
+
     register()

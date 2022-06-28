@@ -125,13 +125,12 @@ class MESH_OT_quick_tris_to_quads(bpy.types.Operator):
         return {"FINISHED"}
 
 
-class MESH_OT_set_edge_weight(CustomOperator, bpy.types.Operator):
+class MESH_OT_toggle_edge_weight(CustomOperator, bpy.types.Operator):
 
-    bl_idname = "mesh.set_edge_weight"
+    bl_idname = "mesh.toggle_edge_weight"
     bl_label = "Set Edge Weight"
     bl_options = {'REGISTER', 'UNDO'}
 
-    edge_weight: bpy.props.IntProperty(name='edge_weight', description='Set edge weight', default=1)
     weight_type: bpy.props.StringProperty(name='weight_type', description='Set weight type', default="BEVEL")
 
     bm = None
@@ -142,27 +141,32 @@ class MESH_OT_set_edge_weight(CustomOperator, bpy.types.Operator):
 
     @classmethod
     def bmesh(cls, context):
-        # bpy.ops.object.mode_set(mode='OBJECT')
-        me = context.edit_object.data
-        cls.bm = bmesh.from_edit_mesh(me)
+        bpy.ops.object.mode_set(mode='EDIT')
+        cls.me = context.edit_object.data
+        bm = bmesh.from_edit_mesh(cls.me)
+        cls.bm = bm
 
     def invoke(self, context, event):
-        bpy.ops.object.mode_set(mode='EDIT')
         self.bmesh(context)
         return self.execute(context)
 
     def execute(self, context):
+        if self.bm is None or not self.bm.is_valid:
+            self.bmesh(context)
+
         sel_edges = [e for e in self.bm.edges[:] if e.select]
         if self.weight_type == "BEVEL":
             weight_layer = self.bm.edges.layers.bevel_weight.verify()
-        else:
+        elif self.weight_type == "CREASE":
             weight_layer = self.bm.edges.layers.crease.verify()
-
         for edge in sel_edges:
-            edge[weight_layer] = self.edge_weight
+            if self.weight_type == "SEAM":
+                edge.seam = not edge.seam
+            else:
+                val = not edge[weight_layer]
+                edge[weight_layer] = float(val)
 
         bmesh.update_edit_mesh(context.edit_object.data)
-        self.bm.free()
         return {"FINISHED"}
 
 
@@ -173,5 +177,5 @@ classes = (
     MESH_OT_boundary_to_sharp,
     MESH_OT_boundary_to_seam,
     MESH_OT_quick_tris_to_quads,
-    MESH_OT_set_edge_weight,
+    MESH_OT_toggle_edge_weight,
 )
