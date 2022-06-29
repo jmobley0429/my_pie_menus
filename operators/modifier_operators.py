@@ -15,10 +15,21 @@ class CustomAddMirrorModifier(CustomOperator, bpy.types.Operator):
     bl_idname = "object.custom_mirror_modifier"
     bl_label = "Add Custom Mirror"
     bl_parent_id = "CustomOperator"
+    bl_options = {"REGISTER", "UNDO"}
 
     mirror_type: bpy.props.StringProperty(
         default="",
     )
+    mirror_direction: bpy.props.StringProperty(
+        default="",
+    )
+    bisect: bpy.props.BoolProperty(default=True)
+
+    def invoke(self, context, event):
+        if event.alt:
+            self.bisect = False
+
+        return self.execute(context)
 
     def execute(self, context):
         in_edit_mode = bool(bpy.context.object.mode == "EDIT")
@@ -26,7 +37,8 @@ class CustomAddMirrorModifier(CustomOperator, bpy.types.Operator):
             bpy.ops.object.mode_set(mode="OBJECT")
 
         obj = self.get_active_obj()
-        self._bisect_mesh()
+        if self.bisect:
+            self._bisect_mesh()
         bpy.ops.object.modifier_add(type='MIRROR')
         axis_index = self.mirror_axis
         mirror_mod = obj.modifiers[:][-1]
@@ -36,7 +48,11 @@ class CustomAddMirrorModifier(CustomOperator, bpy.types.Operator):
         mirror_mod.use_axis[axis_index] = True
         mirror_mod.use_bisect_axis[axis_index] = True
         mirror_mod.use_clip = True
-        if self.mirror_type != "Z":
+        if self.mirror_type not in {
+            "Z_POS",
+            "X_POS",
+            "Y_POS",
+        }:
             mirror_mod.use_bisect_flip_axis[axis_index] = True
         if in_edit_mode:
             bpy.ops.object.mode_set(mode="EDIT")
@@ -57,16 +73,14 @@ class CustomAddMirrorModifier(CustomOperator, bpy.types.Operator):
             geom.extend(bm.faces[:])
             return geom
 
-        args = self.bisect_args
+        kwargs = self.bisect_args
 
         ret = bmesh.ops.bisect_plane(
             bm,
             geom=get_geom(bm),
             dist=0.0001,
             plane_co=(0, 0, 0),
-            plane_no=args['plane_no'],
-            clear_outer=args['clear_outer'],
-            clear_inner=args['clear_inner'],
+            **kwargs,
         )
 
         bm.to_mesh(me)
@@ -75,28 +89,42 @@ class CustomAddMirrorModifier(CustomOperator, bpy.types.Operator):
     @property
     def mirror_axis(self):
         if self.mirror_type:
-            axes = {
-                'X': 0,
-                'Y': 1,
-                'Z': 2,
-            }
-            return axes[self.mirror_type]
+            if "X" in self.mirror_type:
+                return 0
+            elif "Y" in self.mirror_type:
+                return 1
+            return 2
 
     @property
     def bisect_args(self):
         if self.mirror_type:
             vals = {
-                'X': {
+                'X_NEG': {
                     'plane_no': (1, 0, 0),
                     'clear_inner': False,
                     'clear_outer': True,
                 },
-                'Y': {
+                'Y_NEG': {
                     'plane_no': (0, 1, 0),
                     'clear_inner': False,
                     'clear_outer': True,
                 },
-                'Z': {
+                'Z_NEG': {
+                    'plane_no': (0, 0, 1),
+                    'clear_inner': False,
+                    'clear_outer': True,
+                },
+                'X_POS': {
+                    'plane_no': (1, 0, 0),
+                    'clear_inner': True,
+                    'clear_outer': False,
+                },
+                'Y_POS': {
+                    'plane_no': (0, 1, 0),
+                    'clear_inner': True,
+                    'clear_outer': False,
+                },
+                'Z_POS': {
                     'plane_no': (0, 0, 1),
                     'clear_inner': True,
                     'clear_outer': False,
@@ -126,6 +154,7 @@ class CustomAddBevelModifier(BevelModifier, bpy.types.Operator):
     bl_idname = "object.custom_bevel_modifier"
     bl_label = "Add Custom Bevel"
     bl_parent_id = "CustomOperator"
+    bl_options = {"REGISTER", "UNDO"}
 
     def execute(self, context):
         self._add_bevel_modifier()
@@ -139,6 +168,7 @@ class CustomAddQuickBevSubSurfModifier(BevelModifier, bpy.types.Operator):
     bl_idname = "object.custom_bevel_subsurf_modifier"
     bl_label = "Add Custom Bevel Subsurf"
     bl_parent_id = "CustomAddBevelModifier"
+    bl_options = {"REGISTER", "UNDO"}
 
     def execute(self, context):
         obj = self.get_active_obj()
@@ -157,6 +187,7 @@ class CustomWeightedNormal(CustomOperator, bpy.types.Operator):
 
     bl_idname = "object.custom_weighted_normal"
     bl_label = "Add Custom Weighted Normal"
+    bl_options = {"REGISTER", "UNDO"}
 
     def execute(self, context):
         obj = self.get_active_obj()
@@ -172,6 +203,7 @@ class CustomSimpleDeform(CustomModalOperator, bpy.types.Operator):
 
     bl_idname = "object.custom_simple_deform"
     bl_label = "Add Custom Simple Deform"
+    bl_options = {"REGISTER", "UNDO"}
 
     angle: bpy.props.FloatProperty(name='angle', description='Deform Angle', default=45.0)
     axis: bpy.props.StringProperty(name='axis', description='Deform Axis', default="Z")
@@ -219,6 +251,8 @@ class CustomSimpleDeform(CustomModalOperator, bpy.types.Operator):
 class CustomShrinkwrap(CustomOperator, bpy.types.Operator):
     """Add Custom Shrinkwrap Modifier"""
 
+    bl_options = {"REGISTER", "UNDO"}
+
     bl_idname = "object.custom_shrinkwrap"
     bl_label = "Add Custom Shrinkwrap"
 
@@ -242,6 +276,7 @@ class CustomLattice(CustomOperator, bpy.types.Operator):
 
     bl_idname = "object.custom_lattice"
     bl_label = "Add Custom Lattice"
+    bl_options = {"REGISTER", "UNDO"}
 
     def execute(self, context):
         bpy.ops.object.modifier_add(type="LATTICE")
@@ -257,6 +292,7 @@ class CustomRemesh(CustomOperator, bpy.types.Operator):
 
     bl_idname = "object.custom_remesh"
     bl_label = "Add Custom Remesh"
+    bl_options = {"REGISTER", "UNDO"}
 
     def execute(self, context):
         bpy.ops.object.modifier_add(type="REMESH")
@@ -269,13 +305,31 @@ class CustomRemesh(CustomOperator, bpy.types.Operator):
 class CustomDecimate(CustomOperator, bpy.types.Operator):
     """Add Custom Decimate Modifier"""
 
+    bl_options = {"REGISTER", "UNDO"}
+
     bl_idname = "object.custom_decimate"
     bl_label = "Add Custom Decimate"
 
+    apply_mod = False
+    mode = None
+
+    def invoke(self, context, event):
+        self.mode = context.mode
+        if event.alt:
+            self.apply_mod = True
+        return self.execute(context)
+
     def execute(self, context):
+        switch_mode = self.mode in {"EDIT", "SCULPT"}
+        if switch_mode:
+            self.to_mode("OBJECT")
         bpy.ops.object.modifier_add(type="DECIMATE")
         mod = self._get_last_modifier()
         mod.ratio = 0.1
+        if self.apply_mod:
+            bpy.ops.object.modifier_apply(modifier=mod.name)
+        if switch_mode:
+            self.to_mode(self.mode)
         return {"FINISHED"}
 
 

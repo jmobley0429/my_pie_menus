@@ -176,12 +176,23 @@ class PIE_MT_AddModifier(Menu):
         # Left -- Mirror
         pie = layout.menu_pie()
         box = pie.split().column()
-        op = box.operator('object.custom_mirror_modifier', text="Mirror X", icon="MOD_MIRROR")
-        op.mirror_type = "X"
-        op = box.operator('object.custom_mirror_modifier', text="Mirror Y", icon="MOD_MIRROR")
-        op.mirror_type = "Y"
-        op = box.operator('object.custom_mirror_modifier', text="Mirror Z", icon="MOD_MIRROR")
-        op.mirror_type = "Z"
+        box.label(text="Mirror")
+        box.scale_x = 1.2
+        spl = box.split()
+        op = spl.operator('object.custom_mirror_modifier', text="X -", icon="MOD_MIRROR")
+        op.mirror_type = "X_POS"
+        op = spl.operator('object.custom_mirror_modifier', text="X +", icon="MOD_MIRROR")
+        op.mirror_type = "X_NEG"
+        spl = box.split()
+        op = spl.operator('object.custom_mirror_modifier', text="Y -", icon="MOD_MIRROR")
+        op.mirror_type = "Y_POS"
+        op = spl.operator('object.custom_mirror_modifier', text="Y +", icon="MOD_MIRROR")
+        op.mirror_type = "Y_NEG"
+        spl = box.split()
+        op = spl.operator('object.custom_mirror_modifier', text="Z -", icon="MOD_MIRROR")
+        op.mirror_type = "Z_POS"
+        op = spl.operator('object.custom_mirror_modifier', text="Z +", icon="MOD_MIRROR")
+        op.mirror_type = "Z_NEG"
         # Right -- Bevel / Shading
         box = pie.split().column()
         box.operator('object.custom_bevel_modifier', text="Bevel", icon="MOD_BEVEL")

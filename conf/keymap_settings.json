@@ -1,4 +1,4 @@
-KEYMAP_SETTINGS = [
+[
     {
         "name": "3D View",
         "letter": "A",
@@ -40,7 +40,7 @@ KEYMAP_SETTINGS = [
         "region_type": "WINDOW",
     },
     {
-        "name": "3D View Generic",
+        "name": "3D View",
         "letter": "Q",
         "class": "PIE_MT_AddModifier",
         "shift": 1,

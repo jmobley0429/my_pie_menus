@@ -19,6 +19,9 @@ class CustomOperator:
     def get_last_added_object():
         return bpy.context.object
 
+    def to_mode(self, mode):
+        bpy.ops.object.mode_set(mode=mode)
+
     def get_mod_and_target_objects(self):
         target = self.get_active_obj()
         objs = set(self.get_selected_objects())
