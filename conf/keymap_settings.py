@@ -2,7 +2,7 @@ KEYMAP_SETTINGS = [
     {
         "name": "3D View",
         "letter": "A",
-        "class": "PIE_MT_AddMesh",
+        "idname": "PIE_MT_AddMesh",
         "shift": 1,
         "ctrl": 0,
         "alt": 0,
@@ -12,7 +12,7 @@ KEYMAP_SETTINGS = [
     {
         "name": "Mesh",
         "letter": "A",
-        "class": "PIE_MT_AddMesh",
+        "idname": "PIE_MT_AddMesh",
         "shift": 1,
         "ctrl": 0,
         "alt": 0,
@@ -22,7 +22,7 @@ KEYMAP_SETTINGS = [
     {
         "name": "3D View",
         "letter": "A",
-        "class": "PIE_MT_AddOtherObjects",
+        "idname": "PIE_MT_AddOtherObjects",
         "shift": 1,
         "ctrl": 1,
         "alt": 0,
@@ -32,7 +32,7 @@ KEYMAP_SETTINGS = [
     {
         "name": "Mesh",
         "letter": "X",
-        "class": "mesh.reduce_cylinder",
+        "idname": "mesh.reduce_cylinder",
         "shift": 1,
         "ctrl": 0,
         "alt": 1,
@@ -42,7 +42,7 @@ KEYMAP_SETTINGS = [
     {
         "name": "3D View Generic",
         "letter": "Q",
-        "class": "PIE_MT_AddModifier",
+        "idname": "PIE_MT_AddModifier",
         "shift": 1,
         "ctrl": 1,
         "alt": 0,
@@ -52,7 +52,7 @@ KEYMAP_SETTINGS = [
     {
         "name": "Object Mode",
         "letter": "C",
-        "class": "PIE_MT_ConvertMeshCurve",
+        "idname": "PIE_MT_ConvertMeshCurve",
         "shift": 0,
         "ctrl": 0,
         "alt": 1,
@@ -62,7 +62,7 @@ KEYMAP_SETTINGS = [
     {
         "name": "Node Editor",
         "letter": "W",
-        "class": "NODE_OT_node_align_top",
+        "idname": "NODE_OT_node_align_top",
         "shift": 1,
         "ctrl": 0,
         "alt": 1,
@@ -72,7 +72,7 @@ KEYMAP_SETTINGS = [
     {
         "name": "Node Editor",
         "letter": "S",
-        "class": "NODE_OT_node_align_bottom",
+        "idname": "NODE_OT_node_align_bottom",
         "shift": 1,
         "ctrl": 0,
         "alt": 1,
@@ -82,7 +82,7 @@ KEYMAP_SETTINGS = [
     {
         "name": "Node Editor",
         "letter": "D",
-        "class": "NODE_OT_node_align_right",
+        "idname": "NODE_OT_node_align_right",
         "shift": 1,
         "ctrl": 0,
         "alt": 1,
@@ -92,7 +92,7 @@ KEYMAP_SETTINGS = [
     {
         "name": "Node Editor",
         "letter": "A",
-        "class": "NODE_OT_node_align_left",
+        "idname": "NODE_OT_node_align_left",
         "shift": 1,
         "ctrl": 0,
         "alt": 1,

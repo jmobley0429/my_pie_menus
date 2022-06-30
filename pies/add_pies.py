@@ -21,27 +21,6 @@ class PIE_MT_AddMesh(Menu):
 
         # Right -- Cylinder
         box = pie.split().column()
-        op = box.operator("mesh.primitive_cylinder_add", text="Cylinder - 32", icon="MESH_CYLINDER")
-        op.vertices = 32
-        op = box.operator("mesh.primitive_cylinder_add", text="Cylinder - 24", icon="MESH_CYLINDER")
-        op.vertices = 16
-        op = box.operator("mesh.primitive_cylinder_add", text="Cylinder - 8", icon="MESH_CYLINDER")
-        op.vertices = 8
-
-        # bottom -- Circle
-        box = pie.split().column()
-        op = box.operator("mesh.primitive_circle_add", text="Circle - 32", icon="MESH_CIRCLE")
-        op.vertices = 32
-        op = box.operator("mesh.primitive_circle_add", text="Circle - 24", icon="MESH_CIRCLE")
-        op.vertices = 24
-        op = box.operator("mesh.primitive_circle_add", text="Circle - 16", icon="MESH_CIRCLE")
-        op.vertices = 16
-        op = box.operator("mesh.primitive_circle_add", text="Circle - 8", icon="MESH_CIRCLE")
-        op.vertices = 8
-
-        # Top -- Spheres
-
-        box = pie.split().column()
         op = box.operator("mesh.primitive_uv_sphere_add", text="UV Sphere", icon="MESH_UVSPHERE")
         op.segments = 32
         op.ring_count = 16
@@ -51,6 +30,54 @@ class PIE_MT_AddMesh(Menu):
         op.arc_div = 8
         op.radius = 1
         op.div_type = "CORNERS"
+
+        # bottom -- Circle
+        box = pie.split().column()
+        box.label(text="Circle")
+        spl = box.split()
+        op = spl.operator("mesh.primitive_circle_add", text="6", icon="MESH_CIRCLE")
+        op.vertices = 6
+        op = spl.operator("mesh.primitive_circle_add", text="12", icon="MESH_CIRCLE")
+        op.vertices = 12
+        spl = box.split()
+        op = spl.operator("mesh.primitive_circle_add", text="8", icon="MESH_CIRCLE")
+        op.vertices = 8
+        op = spl.operator("mesh.primitive_circle_add", text="16", icon="MESH_CIRCLE")
+        op.vertices = 16
+        spl = box.split()
+        op = spl.operator("mesh.primitive_circle_add", text="24", icon="MESH_CIRCLE")
+        op.vertices = 24
+        op = spl.operator("mesh.primitive_circle_add", text="48", icon="MESH_CIRCLE")
+        op.vertices = 48
+        spl = box.split()
+        op = spl.operator("mesh.primitive_circle_add", text="32", icon="MESH_CIRCLE")
+        op.vertices = 32
+        op = spl.operator("mesh.primitive_circle_add", text="64", icon="MESH_CIRCLE")
+        op.vertices = 64
+
+        # Top -- Spheres
+        box = pie.split().column()
+        box.label(text="Cylinder")
+        spl = box.split()
+        op = spl.operator("mesh.primitive_cylinder_add", text="6", icon="MESH_CYLINDER")
+        op.vertices = 6
+        op = spl.operator("mesh.primitive_cylinder_add", text="12", icon="MESH_CYLINDER")
+        op.vertices = 12
+        spl = box.split()
+        op = spl.operator("mesh.primitive_cylinder_add", text="8", icon="MESH_CYLINDER")
+        op.vertices = 8
+        op = spl.operator("mesh.primitive_cylinder_add", text="16", icon="MESH_CYLINDER")
+        op.vertices = 16
+        spl = box.split()
+        op = spl.operator("mesh.primitive_cylinder_add", text="24", icon="MESH_CYLINDER")
+        op.vertices = 24
+        op = spl.operator("mesh.primitive_cylinder_add", text="48", icon="MESH_CYLINDER")
+        op.vertices = 48
+        spl = box.split()
+        op = spl.operator("mesh.primitive_cylinder_add", text="32", icon="MESH_CYLINDER")
+        op.vertices = 32
+        op = spl.operator("mesh.primitive_cylinder_add", text="64", icon="MESH_CYLINDER")
+        op.vertices = 64
 
         # Curves
         box = pie.split().column()

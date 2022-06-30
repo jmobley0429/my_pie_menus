@@ -13,6 +13,8 @@ def db_block(area: str):
     print(f"{area}\n" * 3)
 
 
+db_block("**** MY_PIE_MENUS ****")
+
 if "bpy" in locals():
     import importlib
 
@@ -64,38 +66,16 @@ classes.sort(key=lambda cls: cls.bl_idname)
 addon_keymaps = []
 
 
-def dedupe_keymaps():
-    wm = bpy.context.window_manager
+def register_keymap(setting):
+    args = list(dict(sorted(setting.items())).values())
+    alt, idname, ctrl, letter, name, region_type, shift, space_type = args
     wm = bpy.context.window_manager
     kc = wm.keyconfigs.addon
-    existing_kms = []
-    for km in kc.keymaps:
-        for kmi in km.keymap_items:
-            try:
-                name = kmi.properties.name
-                if name not in existing_kms:
-                    existing_kms.append(name)
-                else:
-                    km.keymap_items.remove(kmi)
-                    kc.keymaps.remove(km)
-            except AttributeError:
-                continue
-
-
-def register_keymaps():
-    wm = bpy.context.window_manager
-
-    for setting in KMS:
-        args = list(dict(sorted(setting.items())).values())
-        alt, class_name, ctrl, letter, name, region_type, shift, space_type = args
-        wm = bpy.context.window_manager
-        kc = wm.keyconfigs.addon
-        km = kc.keymaps.new(name=name, space_type=space_type, region_type=region_type)
-        kmi = km.keymap_items.new('wm.call_menu_pie', letter, 'PRESS', shift=shift, ctrl=ctrl, alt=alt)
-        kmi.properties.name = class_name
-        kmi.active = True
-
-        addon_keymaps.append((km, kmi))
+    km = kc.keymaps.new(name=name, space_type=space_type, region_type=region_type)
+    kmi = km.keymap_items.new('wm.call_menu_pie', letter, 'PRESS', shift=shift, ctrl=ctrl, alt=alt)
+    kmi.properties.name = idname
+    kmi.active = True
+    addon_keymaps.append((km, kmi))
 
 
 def unregister_keymaps():
@@ -109,7 +89,6 @@ def unregister_keymaps():
 
 
 def register():
-    register_keymaps()
     for cls in classes:
         try:
             bpy.utils.unregister_class(cls)
@@ -125,4 +104,8 @@ def unregister():
 
 
 if __name__ == "__main__":
+
     register()
+    for setting in KMS:
+        register_keymap(setting)
+db_block("**** MY_PIE_MENUS ****")
