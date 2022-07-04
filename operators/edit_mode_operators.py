@@ -141,19 +141,16 @@ class MESH_OT_toggle_edge_weight(CustomOperator, bpy.types.Operator):
 
     @classmethod
     def bmesh(cls, context):
-        bpy.ops.object.mode_set(mode='EDIT')
         cls.me = context.edit_object.data
         bm = bmesh.from_edit_mesh(cls.me)
         cls.bm = bm
 
     def invoke(self, context, event):
-        self.bmesh(context)
+
         return self.execute(context)
 
     def execute(self, context):
-        if self.bm is None or not self.bm.is_valid:
-            self.bmesh(context)
-
+        self.bmesh(context)
         sel_edges = [e for e in self.bm.edges[:] if e.select]
         if self.weight_type == "BEVEL":
             weight_layer = self.bm.edges.layers.bevel_weight.verify()
@@ -167,6 +164,7 @@ class MESH_OT_toggle_edge_weight(CustomOperator, bpy.types.Operator):
                 edge[weight_layer] = float(val)
 
         bmesh.update_edit_mesh(context.edit_object.data)
+        self.bm.free()
         return {"FINISHED"}
 
 
