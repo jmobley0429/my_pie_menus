@@ -4,9 +4,9 @@ import bmesh
 
 
 class CustomOperator:
-    @classmethod
-    def poll(cls, context):
-        return context.active_object is not None
+    # @classmethod
+    # def poll(cls, context):
+    #     return context.active_object is not None
 
     @staticmethod
     def get_active_obj():
@@ -50,6 +50,10 @@ class CustomOperator:
     def set_active_and_selected(self, context, obj, selected=True):
         context.view_layer.objects.active = obj
         obj.select_set(selected)
+
+    def select_objects_in_list(self, obj_list):
+        for obj in obj_list:
+            obj.select_set(True)
 
 
 class CustomModalOperator(CustomOperator):
@@ -117,9 +121,26 @@ class CustomBmeshOperator(CustomOperator):
         bm = bmesh.from_edit_mesh(cls.me)
         cls.bm = bm
 
+    @classmethod
+    def new_bmesh(cls, mesh_name):
+        mesh = bpy.data.meshes.new(mesh_name)
+        return bmesh.new()
+
     @property
     def sel_edges(self):
         return [e for e in self.bm.edges[:] if e.select]
+
+    @staticmethod
+    def is_vert(element):
+        return isinstance(element, bmesh.types.BMVert)
+
+    @staticmethod
+    def is_edge(element):
+        return isinstance(element, bmesh.types.BMEdge)
+
+    @staticmethod
+    def is_face(element):
+        return isinstance(element, bmesh.types.BMFace)
 
     def select_sharp_edges(self, bm, threshold):
         for edge in bm.edges[:]:

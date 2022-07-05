@@ -14,13 +14,13 @@ from pathlib import Path
 from .custom_operator import CustomOperator
 
 
-class AddMannequin(bpy.types.Operator):
+class AddMannequin(CustomOperator, bpy.types.Operator):
     bl_idname = "mesh.primitive_mannequin_add"
     bl_label = "Mannequin"
     bl_options = {"REGISTER", "UNDO"}
 
     PARENT_DIR = Path(__file__).parent.parent
-    file_path = PARENT_DIR / "resources" / 'mannequin.json'
+    file_path = PARENT_DIR / "resources" / 'new_mannequin.json'
 
     @property
     def mannequin_name(self):
@@ -47,52 +47,51 @@ class AddMannequin(bpy.types.Operator):
 
     @staticmethod
     def _handle_transforms(obj):
-        rot = Euler((1.5708, 0, 0))
-        obj.rotation_euler.rotate(rot)
+        # rot = Euler((1.5708, 0, 0))
+        # obj.rotation_euler.rotate(rot)
         init_z_dim = obj.dimensions.z
         multiplier = 1.9 / init_z_dim
         obj.dimensions *= multiplier
 
-    @staticmethod
-    def _place_in_scene(obj, context):
+    def _place_in_scene(self, context, obj):
+        prev_select = context.selected_objects
+        bpy.ops.object.select_all(action="DESELECT")
         context.collection.objects.link(obj)
-        context.view_layer.objects.active = obj
-        bpy.context.object.select_set(True)
-
+        self.set_active_and_selected(context, obj)
         bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
         bpy.ops.object.origin_set(type='ORIGIN_GEOMETRY', center='MEDIAN')
         bpy.ops.object.shade_smooth()
         bpy.ops.object.pivotobottom()
         cursor_loc = bpy.context.scene.cursor.location
         obj.location = cursor_loc
+        self.select_objects_in_list(prev_select)
 
     def execute(self, context):
         mesh = self._get_mesh_data()
         bpy.data.objects.new(self.mannequin_name, mesh)
         obj = bpy.data.objects[self.mannequin_name]
         self._handle_transforms(obj)
-        self._place_in_scene(obj, context)
+        self._place_in_scene(context, obj)
         return {'FINISHED'}
 
 
-class CustomAddCube(bpy.types.Operator, AddObjectHelper):
-    """Add a simple box mesh"""
+class CustomCubeAdd(bpy.types.Operator, AddObjectHelper):
+    """Add a simple cube mesh"""
 
     bl_idname = "mesh.custom_cube_add"
-    bl_label = "Add Box"
+    bl_label = "Add Cube"
     bl_options = {'REGISTER', 'UNDO'}
 
     size: bpy.props.FloatProperty(
         name="Size",
-        description="Box Size",
+        description="Cube Size",
         min=0.01,
         max=100.0,
         default=1.0,
     )
 
     def execute(self, context):
-        mesh = bpy.data.meshes.new("Cube")
-        bm = bmesh.new()
+        self.new_bmesh("Cube")
         geom = bmesh.ops.create_cube(bm, size=self.size)
         translate = self.size / 2
         for vert in geom['verts']:
@@ -104,31 +103,47 @@ class CustomAddCube(bpy.types.Operator, AddObjectHelper):
         return {'FINISHED'}
 
 
-class CustomAddCylinder(bpy.types.Operator, AddObjectHelper):
+class CustomCylinderAdd(bpy.types.Operator, AddObjectHelper):
     """Add a simple cylinder mesh"""
 
     bl_idname = "mesh.custom_cylinder_add"
     bl_label = "Add Cylinder"
     bl_options = {'REGISTER', 'UNDO'}
 
-    size: bpy.props.FloatProperty(
-        name="Size",
-        description="Cylinder Size",
-        min=0.01,
-        max=100.0,
+    radius: bpy.props.FloatProperty(
+        name="Radius",
+        description="Cylinder Radius",
+        default=0.5,
+    )
+    height: bpy.props.FloatProperty(
+        name="Height",
+        description="Cylinder Height",
         default=1.0,
+    )
+    verts: bpy.props.IntProperty(
+        name="Vertices",
+        description="Vertex Count",
+        default=16,
     )
 
     def execute(self, context):
-        mesh = bpy.data.meshes.new("Cylinder")
-        bm = bmesh.new()
-        geom = bmesh.ops.create_cylinder(bm, size=self.size)
-        translate = self.size / 2
-        for vert in geom['verts']:
-            vert.co.z += translate
-        bm.to_mesh(mesh)
-        mesh.update()
-        object_utils.object_data_add(context, mesh, operator=self)
+        bm = self.new_bmesh("Cylinder")
+        bmesh.ops.create_circle(self.bm, cap_ends=True, radius=self.radius, segments=self.verts)
+        faces = self.bm.faces[:]
+        ret = bmesh.ops.extrude_face_region(self.bm, geom=faces)
+        new_verts = [v for v in ret['geom'] if self.is_vert(v)]
+        del ret
+
+        vec = Vector((0, 0, self.height))
+        bmesh.ops.translate(
+            self.bm,
+            vec=vec,
+            verts=new_verts,
+        )
+
+        self.bm.to_mesh(self.mesh)
+        self.mesh.update()
+        object_utils.object_data_add(context, self.mesh, operator=self)
 
         return {'FINISHED'}
 
