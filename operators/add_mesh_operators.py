@@ -11,7 +11,7 @@ import json
 
 from pathlib import Path
 
-from .custom_operator import CustomOperator
+from .custom_operator import *
 
 
 class AddMannequin(CustomOperator, bpy.types.Operator):
@@ -20,7 +20,7 @@ class AddMannequin(CustomOperator, bpy.types.Operator):
     bl_options = {"REGISTER", "UNDO"}
 
     PARENT_DIR = Path(__file__).parent.parent
-    file_path = PARENT_DIR / "resources" / 'new_mannequin.json'
+    file_path = PARENT_DIR / "resources" / 'mannequin.json'
 
     @property
     def mannequin_name(self):
@@ -75,7 +75,7 @@ class AddMannequin(CustomOperator, bpy.types.Operator):
         return {'FINISHED'}
 
 
-class CustomCubeAdd(bpy.types.Operator, AddObjectHelper):
+class CustomCubeAdd(CustomBmeshOperator, bpy.types.Operator, AddObjectHelper):
     """Add a simple cube mesh"""
 
     bl_idname = "mesh.custom_cube_add"
@@ -90,20 +90,27 @@ class CustomCubeAdd(bpy.types.Operator, AddObjectHelper):
         default=1.0,
     )
 
+    center_origin = False
+
+    def invoke(self, context, event):
+        if event.alt:
+            self.center_origin = True
+        return self.execute(context)
+
     def execute(self, context):
         self.new_bmesh("Cube")
-        geom = bmesh.ops.create_cube(bm, size=self.size)
-        translate = self.size / 2
-        for vert in geom['verts']:
-            vert.co.z += translate
-        bm.to_mesh(mesh)
-        mesh.update()
-        object_utils.object_data_add(context, mesh, operator=self)
-
+        geom = bmesh.ops.create_cube(self.bm, size=self.size)
+        if not self.center_origin:
+            translate = self.size / 2
+            for vert in geom['verts']:
+                vert.co.z += translate
+        self.bm.to_mesh(self.mesh)
+        self.mesh.update()
+        object_utils.object_data_add(context, self.mesh, operator=self)
         return {'FINISHED'}
 
 
-class CustomCylinderAdd(bpy.types.Operator, AddObjectHelper):
+class CustomCylinderAdd(CustomBmeshOperator, bpy.types.Operator, AddObjectHelper):
     """Add a simple cylinder mesh"""
 
     bl_idname = "mesh.custom_cylinder_add"
@@ -120,31 +127,40 @@ class CustomCylinderAdd(bpy.types.Operator, AddObjectHelper):
         description="Cylinder Height",
         default=1.0,
     )
-    verts: bpy.props.IntProperty(
+    vertices: bpy.props.IntProperty(
         name="Vertices",
         description="Vertex Count",
         default=16,
     )
 
+    center_origin = False
+
+    def invoke(self, context, event):
+        if event.alt:
+            self.center_origin = True
+        return self.execute(context)
+
     def execute(self, context):
-        bm = self.new_bmesh("Cylinder")
-        bmesh.ops.create_circle(self.bm, cap_ends=True, radius=self.radius, segments=self.verts)
+        self.new_bmesh("Cylinder")
+        bmesh.ops.create_circle(self.bm, cap_ends=True, radius=self.radius, segments=self.vertices)
         faces = self.bm.faces[:]
         ret = bmesh.ops.extrude_face_region(self.bm, geom=faces)
         new_verts = [v for v in ret['geom'] if self.is_vert(v)]
         del ret
-
         vec = Vector((0, 0, self.height))
         bmesh.ops.translate(
             self.bm,
             vec=vec,
             verts=new_verts,
         )
+        if self.center_origin:
+            translate = self.height / 2
+            for vert in self.bm.verts[:]:
+                vert.co.z -= translate
 
         self.bm.to_mesh(self.mesh)
         self.mesh.update()
         object_utils.object_data_add(context, self.mesh, operator=self)
-
         return {'FINISHED'}
 
 

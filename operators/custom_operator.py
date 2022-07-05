@@ -123,8 +123,9 @@ class CustomBmeshOperator(CustomOperator):
 
     @classmethod
     def new_bmesh(cls, mesh_name):
-        mesh = bpy.data.meshes.new(mesh_name)
-        return bmesh.new()
+        cls.mesh = bpy.data.meshes.new(mesh_name)
+        cls.bm = bmesh.new()
+        cls.bm.from_mesh(cls.mesh)
 
     @property
     def sel_edges(self):

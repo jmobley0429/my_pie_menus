@@ -12,14 +12,14 @@ class PIE_MT_AddMesh(Menu):
         pie = layout.menu_pie()
         box = pie.split().column()
         # Left -- Cube
-        op = box.operator("mesh.primitive_cube_add", text="Cube - 1m", icon="MESH_CUBE")
+        op = box.operator("mesh.custom_cube_add", text="Cube - 1m", icon="MESH_CUBE")
         op.size = 1
-        op = box.operator("mesh.primitive_cube_add", text="Cube - .5m", icon="MESH_CUBE")
+        op = box.operator("mesh.custom_cube_add", text="Cube - .5m", icon="MESH_CUBE")
         op.size = 0.5
         op = box.operator("mesh.primitive_cube_add", text="Cube - .25m", icon="MESH_CUBE")
         op.size = 0.25
 
-        # Right -- Cylinder
+        # Right -- Sphere
         box = pie.split().column()
         op = box.operator("mesh.primitive_uv_sphere_add", text="UV Sphere", icon="MESH_UVSPHERE")
         op.segments = 32
@@ -55,28 +55,28 @@ class PIE_MT_AddMesh(Menu):
         op = spl.operator("mesh.primitive_circle_add", text="64", icon="MESH_CIRCLE")
         op.vertices = 64
 
-        # Top -- Spheres
+        # Top -- Cylinder
         box = pie.split().column()
         box.label(text="Cylinder")
         spl = box.split()
-        op = spl.operator("mesh.primitive_cylinder_add", text="6", icon="MESH_CYLINDER")
+        op = spl.operator("mesh.custom_cylinder_add", text="6", icon="MESH_CYLINDER")
         op.vertices = 6
-        op = spl.operator("mesh.primitive_cylinder_add", text="12", icon="MESH_CYLINDER")
+        op = spl.operator("mesh.custom_cylinder_add", text="12", icon="MESH_CYLINDER")
         op.vertices = 12
         spl = box.split()
-        op = spl.operator("mesh.primitive_cylinder_add", text="8", icon="MESH_CYLINDER")
+        op = spl.operator("mesh.custom_cylinder_add", text="8", icon="MESH_CYLINDER")
         op.vertices = 8
-        op = spl.operator("mesh.primitive_cylinder_add", text="16", icon="MESH_CYLINDER")
+        op = spl.operator("mesh.custom_cylinder_add", text="16", icon="MESH_CYLINDER")
         op.vertices = 16
         spl = box.split()
-        op = spl.operator("mesh.primitive_cylinder_add", text="24", icon="MESH_CYLINDER")
+        op = spl.operator("mesh.custom_cylinder_add", text="24", icon="MESH_CYLINDER")
         op.vertices = 24
-        op = spl.operator("mesh.primitive_cylinder_add", text="48", icon="MESH_CYLINDER")
+        op = spl.operator("mesh.custom_cylinder_add", text="48", icon="MESH_CYLINDER")
         op.vertices = 48
         spl = box.split()
-        op = spl.operator("mesh.primitive_cylinder_add", text="32", icon="MESH_CYLINDER")
+        op = spl.operator("mesh.custom_cylinder_add", text="32", icon="MESH_CYLINDER")
         op.vertices = 32
-        op = spl.operator("mesh.primitive_cylinder_add", text="64", icon="MESH_CYLINDER")
+        op = spl.operator("mesh.custom_cylinder_add", text="64", icon="MESH_CYLINDER")
         op.vertices = 64
 
         # Curves
@@ -257,12 +257,32 @@ class PIE_MT_AddOtherObjects(Menu):
         layout = self.layout
         pie = layout.menu_pie()
         # Left -- Lights
-        pie.operator_menu_enum("object.light_add", "type")
-        # Right -- Camera
+        box = pie.split().column()
+        box.label(text="Light")
+        spl = box.split()
+        op = spl.operator("object.light_add", text="Point", icon="LIGHT_POINT")
+        op.type = "POINT"
+        op = spl.operator("object.light_add", text="Area", icon="LIGHT_AREA")
+        op.type = "AREA"
+        spl = box.split()
+        op = spl.operator("object.light_add", text="Sun", icon="LIGHT_SUN")
+        op.type = "SUN"
+        op = spl.operator("object.light_add", text="Spot", icon="LIGHT_SPOT")
+        op.type = "SPOT"
+        # Right -- CubeMaps
+        box = pie.split().column()
+        box.label(text="Light Probes")
+        op = box.operator("object.lightprobe_add", text="Irradiance Volume", icon="LIGHTPROBE_GRID")
+        op.type = "GRID"
+        spl = box.split()
+        op = spl.operator("object.lightprobe_add", text="Cube", icon="LIGHTPROBE_CUBEMAP")
+        op.type = "CUBEMAP"
+        op = spl.operator("object.lightprobe_add", text="Plane", icon="LIGHTPROBE_PLANAR")
+        op.type = "PLANAR"
+        # Bottom -- Camera
         pie.operator("object.smart_add_camera", text="Add Camera", icon="CAMERA_DATA")
-        # Bottom -- Light Probe
-        pie.operator_menu_enum("object.lightprobe_add", "type")
-        # Top -- Smart Lattice
+
+        # Top -- Images as Planes
         pie.operator("import_image.to_plane", text="Image as Plane", icon="FILE_IMAGE")
         # Text
         pie.operator("object.text_add", text="Text", icon="SMALL_CAPS")
@@ -271,7 +291,7 @@ class PIE_MT_AddOtherObjects(Menu):
         # Armature
         pie.operator("object.armature_add", text="Armature", icon="ARMATURE_DATA")
         # Metaball
-        pie.operator_menu_enum("object.metaball_add", "type")
+        pie.menu("VIEW3D_MT_metaball_add", text="Metaball", icon="META_DATA")
 
 
 classes = (
