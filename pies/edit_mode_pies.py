@@ -26,12 +26,12 @@ class PIE_MT_edge_menu(Menu):
         op = col.operator("mesh.mark_seam", text="Clear Seam")
         op.clear = True
         col.operator("mesh.boundary_to_seam", text="Boundary to Seam")
-        # Right
+        # Right bevel weights
         col = pie.split().column()
         op = col.operator("mesh.toggle_edge_weight", text="Toggle Bevel Weight")
         op.weight_type = "BEVEL"
-        # Bottom
-
+        op = col.operator("mesh.set_sharp_to_weighted", text="Sharp to Beveled")
+        # Bottom - Select Edge loops/rings
         bx = pie.split().box()
         bx.label(text="Select Edges")
         bx.ui_units_y -= 50
@@ -39,14 +39,14 @@ class PIE_MT_edge_menu(Menu):
         col.operator("mesh.loop_multi_select", text="Edge Rings").ring = True
         col.operator("mesh.loop_multi_select", text="Edge Loops").ring = False
         col.operator("mesh.select_nth")
-        # Top
+        # Top select sharp, regions etc.
         bx = pie.split().box()
         bx.label(text="Select")
         col = bx.column()
         col.operator("mesh.edges_select_sharp", text="Sharp Edges")
         col.operator("mesh.loop_to_region", text="Inner Region")
         col.operator("mesh.region_to_loop", text="Boundary Loop")
-        #
+        # TOP LEFT - set sharps
         col = pie.split().column()
         col.operator("mesh.mark_sharp", text="Mark Sharp")
         op = col.operator("mesh.mark_sharp", text="Clear Sharp")
@@ -60,6 +60,8 @@ class PIE_MT_edge_menu(Menu):
         # Right
         col = pie.split().column()
         op = col.operator("mesh.toggle_edge_weight", text="Toggle Crease")
+        op.weight_type = "CREASE"
+        op = col.operator("mesh.set_sharp_to_weighted", text="Sharp to Creased")
         op.weight_type = "CREASE"
 
         # Bottom

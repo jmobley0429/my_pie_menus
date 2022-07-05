@@ -1,5 +1,6 @@
 import bpy
 import blf
+import bmesh
 
 
 class CustomOperator:
@@ -18,6 +19,10 @@ class CustomOperator:
     @staticmethod
     def get_last_added_object():
         return bpy.context.object
+
+    @staticmethod
+    def edit_obj_poll(context):
+        return context.mode == "EDIT_MESH" and context.active_object is not None
 
     def to_mode(self, mode):
         bpy.ops.object.mode_set(mode=mode)
@@ -103,6 +108,34 @@ class CustomModalOperator(CustomOperator):
 
     def _clear_info(self, context):
         context.area.header_text_set(None)
+
+
+class CustomBmeshOperator(CustomOperator):
+    @classmethod
+    def bmesh(cls, context):
+        cls.me = context.edit_object.data
+        bm = bmesh.from_edit_mesh(cls.me)
+        cls.bm = bm
+
+    @property
+    def sel_edges(self):
+        return [e for e in self.bm.edges[:] if e.select]
+
+    def select_sharp_edges(self, bm, threshold):
+        for edge in bm.edges[:]:
+            angle = edge.calc_face_angle()
+            if angle >= threshold:
+                edge.select = True
+            else:
+                edge.select = False
+
+    def select_edges(self, context, edges, select=True):
+        try:
+            for edge in edges:
+                edge.select = select
+        except ReferenceError:
+            self.bmesh(context)
+            self.select_edges(context, edges, select=select)
 
 
 class ModalDrawText:

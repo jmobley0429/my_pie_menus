@@ -1,4 +1,6 @@
 from collections import deque
+from statistics import mean
+
 
 import bpy
 import bmesh
@@ -14,7 +16,6 @@ class CustomAddMirrorModifier(CustomOperator, bpy.types.Operator):
 
     bl_idname = "object.custom_mirror_modifier"
     bl_label = "Add Custom Mirror"
-    bl_parent_id = "CustomOperator"
     bl_options = {"REGISTER", "UNDO"}
 
     mirror_type: bpy.props.StringProperty(
@@ -135,14 +136,22 @@ class CustomAddMirrorModifier(CustomOperator, bpy.types.Operator):
 
 
 class BevelModifier(CustomOperator):
-    def _add_bevel_modifier(self, harden_normals=True):
+    @property
+    def relative_bwidth(self):
         obj = self.get_active_obj()
+        return mean(obj.dimensions) / 65
+
+    def _add_bevel_modifier(self, harden_normals=True, profile=0.5):
+
+        obj = self.get_active_obj()
+
         bpy.ops.object.shade_smooth()
         obj.data.use_auto_smooth = True
         bpy.ops.object.modifier_add(type='BEVEL')
         bevel_mod = obj.modifiers[:][-1]
         bevel_mod.segments = 2
-        bevel_mod.width = 0.025
+        bevel_mod.width = self.relative_bwidth
+        bevel_mod.profile = profile
         bevel_mod.harden_normals = harden_normals
         bevel_mod.miter_outer = "MITER_ARC"
         bevel_mod.use_clamp_overlap = False
@@ -172,7 +181,7 @@ class CustomAddQuickBevSubSurfModifier(BevelModifier, bpy.types.Operator):
 
     def execute(self, context):
         obj = self.get_active_obj()
-        self._add_bevel_modifier(harden_normals=False)
+        self._add_bevel_modifier(harden_normals=False, profile=1)
         bpy.ops.object.modifier_add(type='SUBSURF')
         bpy.ops.object.modifier_add(type='WEIGHTED_NORMAL')
         bpy.ops.object.shade_smooth()

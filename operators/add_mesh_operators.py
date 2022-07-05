@@ -1,4 +1,11 @@
 import bpy
+import bpy
+import bmesh
+from mathutils import Quaternion, Vector, Matrix
+from bpy_extras.object_utils import AddObjectHelper
+from bpy_extras import object_utils
+
+
 from mathutils import Euler
 import json
 
@@ -68,6 +75,66 @@ class AddMannequin(bpy.types.Operator):
         return {'FINISHED'}
 
 
+class CustomAddCube(bpy.types.Operator, AddObjectHelper):
+    """Add a simple box mesh"""
+
+    bl_idname = "mesh.custom_cube_add"
+    bl_label = "Add Box"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    size: bpy.props.FloatProperty(
+        name="Size",
+        description="Box Size",
+        min=0.01,
+        max=100.0,
+        default=1.0,
+    )
+
+    def execute(self, context):
+        mesh = bpy.data.meshes.new("Cube")
+        bm = bmesh.new()
+        geom = bmesh.ops.create_cube(bm, size=self.size)
+        translate = self.size / 2
+        for vert in geom['verts']:
+            vert.co.z += translate
+        bm.to_mesh(mesh)
+        mesh.update()
+        object_utils.object_data_add(context, mesh, operator=self)
+
+        return {'FINISHED'}
+
+
+class CustomAddCylinder(bpy.types.Operator, AddObjectHelper):
+    """Add a simple cylinder mesh"""
+
+    bl_idname = "mesh.custom_cylinder_add"
+    bl_label = "Add Cylinder"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    size: bpy.props.FloatProperty(
+        name="Size",
+        description="Cylinder Size",
+        min=0.01,
+        max=100.0,
+        default=1.0,
+    )
+
+    def execute(self, context):
+        mesh = bpy.data.meshes.new("Cylinder")
+        bm = bmesh.new()
+        geom = bmesh.ops.create_cylinder(bm, size=self.size)
+        translate = self.size / 2
+        for vert in geom['verts']:
+            vert.co.z += translate
+        bm.to_mesh(mesh)
+        mesh.update()
+        object_utils.object_data_add(context, mesh, operator=self)
+
+        return {'FINISHED'}
+
+
 classes = [
     AddMannequin,
+    CustomCubeAdd,
+    CustomCylinderAdd,
 ]
