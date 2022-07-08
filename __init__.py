@@ -1,6 +1,6 @@
 bl_info = {
     "name": " My Pie Menus",
-    "description": "Collection of custom pie menus for me baybey",
+    "description": "Collection of custom pie menus and operators",
     "author": "Jake Mobley",
     "version": (1, 0),
     "blender": (2, 80, 0),
@@ -13,8 +13,6 @@ def db_block(area: str):
     print(f"{area}\n" * 3)
 
 
-db_block("**** MY_PIE_MENUS ****")
-
 if "bpy" in locals():
     import importlib
 
@@ -25,6 +23,7 @@ if "bpy" in locals():
     importlib.reload(object_mode_operators)
     importlib.reload(node_editor_operators)
     importlib.reload(sculpt_mode_operators)
+    importlib.reload(chunk_slicer)
 
     importlib.reload(add_pies)
     importlib.reload(edit_mode_pies)
@@ -41,6 +40,7 @@ else:
     from my_pie_menus.operators import object_mode_operators
     from my_pie_menus.operators import node_editor_operators
     from my_pie_menus.operators import sculpt_mode_operators
+    from my_pie_menus.operators import chunk_slicer
 
     from my_pie_menus.pies import add_pies
     from my_pie_menus.pies import edit_mode_pies
@@ -58,6 +58,7 @@ modules = [
     edit_mode_pies,
     object_mode_pies,
     sculpt_mode_operators,
+    chunk_slicer,
 ]
 
 classes = [cls for module in modules for cls in module.classes]
@@ -108,4 +109,3 @@ if __name__ == "__main__":
     register()
     for setting in KMS:
         register_keymap(setting)
-db_block("**** MY_PIE_MENUS ****")
