@@ -1,5 +1,8 @@
 import bpy
+import bmesh
+import re
 from mathutils import Vector
+from collections import defaultdict
 
 
 class MESH_OT_chunk_slicer(bpy.types.Operator):

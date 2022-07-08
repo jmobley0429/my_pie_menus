@@ -58,10 +58,10 @@ modules = [
     edit_mode_pies,
     object_mode_pies,
     sculpt_mode_operators,
-    chunk_slicer,
 ]
 
 classes = [cls for module in modules for cls in module.classes]
+classes.append(chunk_slicer.MESH_OT_chunk_slicer)
 classes.sort(key=lambda cls: cls.bl_idname)
 
 addon_keymaps = []
