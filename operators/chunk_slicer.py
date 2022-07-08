@@ -1,3 +1,13 @@
+bl_info = {
+    "name": "Chunk Slicer",
+    "description": "Slices an object into uniform chunks on selected axes.",
+    "author": "Jake Mobley",
+    "version": (1, 0),
+    "blender": (2, 80, 0),
+    "location": "Operator Search > Chunk Slicer",
+    "category": "Modeling",
+}
+
 import bpy
 import bmesh
 import re
@@ -13,9 +23,9 @@ class MESH_OT_chunk_slicer(bpy.types.Operator):
 
     bl_options = {'REGISTER', "UNDO"}
 
-    cell_size: bpy.props.FloatProperty(
+    cell_size_ratio: bpy.props.FloatProperty(
         name="Cell Size",
-        description="Distance between each slice.",
+        description="Cell size in world units. Sizes larger than the objects size on one axis will result in no effect.",
         default=0.3,
     )
     cleanup_threshold: bpy.props.FloatProperty(
@@ -27,7 +37,7 @@ class MESH_OT_chunk_slicer(bpy.types.Operator):
     reset_origins: bpy.props.BoolProperty(
         name="Reset Origins",
         description="Set new chunk object origins to geometry center",
-        default=False,
+        default=True,
     )
     x: bpy.props.BoolProperty(
         name="X Axis",
@@ -44,20 +54,35 @@ class MESH_OT_chunk_slicer(bpy.types.Operator):
         description="Slice on the Z axis",
         default=True,
     )
+    fill: bpy.props.BoolProperty(
+        name="Fill",
+        description="Use the 'Fill' option in the mesh bisect. Creates solid chunks, rather than a hollow mesh.",
+        default=True,
+    )
+
+    force: bpy.props.BoolProperty(
+        name="Force Non-Manifold",
+        description="""Will slice the object, even if it has non-manifold geometry.
+        Might cause issues with the operator being able to create 'solid' chunks, or create overlapping geometry.""",
+        default=False,
+    )
 
     axes = list('xyz')
 
     @property
     def num_axes_selected(self):
+        '''To check if user has selected at least one axis before running'''
         return sum([self.x, self.y, self.z])
 
     def _get_plane_co(self, axis):
+        '''Return the formatted coordinate for slicing on the current axis'''
         co = [0, 0, 0]
         index = self.axes.index(axis)
         co[index] = self.current_loc
         return co
 
     def _get_plane_no(self, axis):
+        '''Return the formatted coordinate for the normal of the slice plane on the current axis'''
         plane_nos = {
             'x': Vector((1, 0, 0)),
             'y': Vector((0, 1, 0)),
@@ -75,10 +100,13 @@ class MESH_OT_chunk_slicer(bpy.types.Operator):
         self.bm.from_mesh(mesh)
 
     def _get_start_loc(self, axis):
+        '''Get the initial slice coordinate in an axis.'''
         loc = min([getattr(v.co, axis) for v in self.obj.data.vertices])
         return loc
 
-    def _get_slice_index(self, axis, index):
+    @property
+    def _get_slice_index(self):
+        axis, index = self.current_axis, self.current_index
         return self.slice_locs[axis][index]
 
     def _mesh_has_manifold_geom(self):
@@ -88,6 +116,9 @@ class MESH_OT_chunk_slicer(bpy.types.Operator):
         object.name = f"__Sliced__{self.current_index}"
 
     def _duplicate_obj(self, context):
+        '''Duplicate the current object, set it to be the current slice_object
+        and return it.'''
+
         new_obj = self.obj.copy()
         new_obj.data = self.obj.data.copy()
         self._rename_temp(new_obj)
@@ -97,6 +128,7 @@ class MESH_OT_chunk_slicer(bpy.types.Operator):
         self.current_obj = new_obj
 
     def _slice(self, axis, clear_inner=False, clear_outer=False):
+        '''Perform the steps required to slice the current object.'''
         self.current_obj.select_set(True)
         bpy.ops.object.mode_set(mode="EDIT")
         bpy.ops.mesh.select_all(action="SELECT")
@@ -105,36 +137,52 @@ class MESH_OT_chunk_slicer(bpy.types.Operator):
             plane_no=self._get_plane_no(axis),
             clear_inner=clear_inner,
             clear_outer=clear_outer,
-            use_fill=True,
+            use_fill=self.fill,
         )
-        bpy.ops.mesh.select_all(action="SELECT")
         bpy.ops.mesh.select_all(action="DESELECT")
         bpy.ops.object.mode_set(mode="OBJECT")
         bpy.ops.object.select_all(action="DESELECT")
 
     def slice_operation_(self, context):
+        '''Perform larger scale steps to handle slicing of objects
+        and organization of each object being sliced in succession'''
+
+        # Works by creating a duplicate of the object and, depending on where
+        # the current cut is taking place, will cut and either remove before the
+        # chunk to keep or after, or both
+        #
+        #              slice1      slice2
+        #         ________ : _______ : _______
+        #        |        |:|       |:|       |
+        #        | before |:| chunk |:| after |
+        #        |        |:|  to   |:|       |
+        #        |        |:| keep  |:|       |
+        #
+        #
+
         self._duplicate_obj(context)
         axis = self.current_axis
         i = self.current_index
+        # first cut (index == 0) we only need to slice one time, otherwise we slice directly
+        # one the far edge of the object.
         if i != 0:
             old_loc = self.current_loc
             self.current_loc = self.slice_locs[axis][i - 1]
             self._slice(axis, clear_inner=True)
             self.current_loc = old_loc
+        # every cut in between we cut the before and the after.
+        # last cut we also only cut once, on the before.
         if i != self._slices_in_axis(axis):
             self._slice(axis, clear_outer=True)
 
     def _invalid_dimensions(self, dims):
-        invalid = sum([v <= self.cleanup_threshold for v in dims]) > 1
-
-        if invalid:
-            print("Invalid Dims: ", dims)
-            print([v < self.cleanup_threshold for v in dims])
-            for d in dims:
-                print(f"{d} < {self.cleanup_threshold}")
-        return
+        '''Check if the new sliced object is too small to be valid'''
+        return sum([v <= self.cleanup_threshold for v in dims]) > 1
 
     def _cleanup_objs(self, context):
+        '''Check sliced objects for existing geometry/valid dimensions and then rename,
+        otherwise delete.'''
+
         context.scene.objects.update()
         objs = context.view_layer.objects
         bpy.ops.object.select_all(action="DESELECT")
@@ -145,7 +193,6 @@ class MESH_OT_chunk_slicer(bpy.types.Operator):
             if not obj.data.vertices[:] or self._invalid_dimensions(dims):
                 context.collection.objects.unlink(obj)
                 cleanup_objs.remove(obj)
-
         for i, obj in enumerate(cleanup_objs):
             if self.reset_origins:
                 obj.select_set(True)
@@ -166,7 +213,8 @@ class MESH_OT_chunk_slicer(bpy.types.Operator):
         self.mesh = self.obj.data
         self.bm = bmesh.new()
         self.bm.from_mesh(self.mesh)
-        if not (self._mesh_has_manifold_geom()):
+        # check for manifold geo before running operator.
+        if not (self._mesh_has_manifold_geom()) and not self.force:
             self.report(
                 {"WARNING"}, "Mesh must have manifold geometry to perform slice operation. Operation Cancelled."
             )
@@ -187,6 +235,13 @@ class MESH_OT_chunk_slicer(bpy.types.Operator):
         sliced_x = []
         sliced_y = []
 
+        # Starts with the currently selected object,
+        # duplicates that, slices that in one axis,
+        # appends the new sliced object to the sliced list
+        # then each successive slice axis will pull from those
+        # sliced objects to repeat the process. Depending on which axes the user has selected,
+        # the slice_axis might have to shift objects around to get the slice the correct Objects
+
         if self.num_axes_selected == 0:
             self.report({"ERROR"}, "Must select at least one slice axis.")
             return {"CANCELLED"}
@@ -203,6 +258,8 @@ class MESH_OT_chunk_slicer(bpy.types.Operator):
         if self.y:
             self.current_axis = "y"
             y_locs = self.slice_locs[self.current_axis]
+            # like here, if user didn't choose to slice on the x-axis, we just pretend
+            # the sliced_x list was just the first object all along.
             if not sliced_x:
                 sliced_x = [self.obj]
             for obj in sliced_x:
@@ -216,20 +273,33 @@ class MESH_OT_chunk_slicer(bpy.types.Operator):
         if self.z:
             self.current_axis = "z"
             z_locs = self.slice_locs[self.current_axis]
+            # same deal, if user only chose z then the slice_y is just the first obj.
+            # else if they chose x and z, then pretend that sliced_y is sliced_x
+            # without actually slicing y.
             if not sliced_y:
                 if not sliced_x:
                     sliced_y = [self.obj]
                 else:
                     sliced_y = sliced_x
             for obj in sliced_y:
-
                 self.obj = obj
                 for index, loc in enumerate(z_locs):
                     self.current_loc = loc
                     self.current_index = index
                     self.slice_operation_(context)
-                    # sliced_y.append(self.current_obj)
                 context.collection.objects.unlink(obj)
 
         self._cleanup_objs(context)
         return {'FINISHED'}
+
+
+def register():
+    bpy.utils.register_class(MESH_OT_chunk_slicer)
+
+
+def unregister():
+    bpy.utils.unregister_class(MESH_OT_chunk_slicer)
+
+
+if __name__ == "__main__":
+    register()

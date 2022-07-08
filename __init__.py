@@ -23,7 +23,6 @@ if "bpy" in locals():
     importlib.reload(object_mode_operators)
     importlib.reload(node_editor_operators)
     importlib.reload(sculpt_mode_operators)
-    importlib.reload(chunk_slicer)
 
     importlib.reload(add_pies)
     importlib.reload(edit_mode_pies)
@@ -40,7 +39,6 @@ else:
     from my_pie_menus.operators import object_mode_operators
     from my_pie_menus.operators import node_editor_operators
     from my_pie_menus.operators import sculpt_mode_operators
-    from my_pie_menus.operators import chunk_slicer
 
     from my_pie_menus.pies import add_pies
     from my_pie_menus.pies import edit_mode_pies
@@ -61,7 +59,6 @@ modules = [
 ]
 
 classes = [cls for module in modules for cls in module.classes]
-classes.append(chunk_slicer.MESH_OT_chunk_slicer)
 classes.sort(key=lambda cls: cls.bl_idname)
 
 addon_keymaps = []
