@@ -26,7 +26,7 @@ class OBJECT_OT_chunk_slicer(bpy.types.Operator):
 
     slice_type: bpy.props.EnumProperty(
         name="Slice Type",
-        default="FIXED",
+        default="RELATIVE",
         description="Choose between setting slice size relative to object dimensions or to a fixed unit.",
         items=[
             ("RELATIVE", "Relative", "Slice relative on object dimensions."),
@@ -42,7 +42,7 @@ class OBJECT_OT_chunk_slicer(bpy.types.Operator):
     slice_qty: bpy.props.IntProperty(
         name="Number of Slices",
         description="Number of even slices to divide the object into",
-        default=2,
+        default=5,
         min=2,
     )
     cleanup_threshold: bpy.props.FloatProperty(
@@ -126,17 +126,16 @@ class OBJECT_OT_chunk_slicer(bpy.types.Operator):
         loc = max([getattr(v.co, axis) for v in self.obj.data.vertices])
         return loc
 
-    def _loc_overlaps(self):
-        end_loc = self._get_end_loc(self.current_axis)
-        loc_diff = self.current_loc - end_loc
-        print(
-            f"""
-        Current loc: {self.current_loc}
-        End Loc: {end_loc}
-        Overlap diff: {loc_diff}
-        """
-        )
-        return abs(loc_diff) <= 0.0001
+    def _loc_overlaps(self, loc, axis):
+        end_loc = self._get_end_loc(axis)
+        loc_diff = loc - end_loc
+        overlaps = abs(loc_diff) <= 0.001
+        if overlaps:
+            msg = "is not valid"
+        else:
+            msg = "is valid"
+        print(f"New Loc: {loc}, End Loc: {end_loc}, Difference:{loc_diff}, Location {msg}.")
+        return overlaps
 
     @property
     def _get_slice_index(self):
@@ -202,14 +201,11 @@ class OBJECT_OT_chunk_slicer(bpy.types.Operator):
         if i != 0:
             old_loc = self.current_loc
             self.current_loc = self.slice_locs[axis][i - 1]
-
-            # self._slice(axis, clear_inner=True)
             self._slice(axis, clear_inner=True)
             self.current_loc = old_loc
         # every cut in between we cut the before and the after.
         # last cut we also only cut once, on the before.
-
-        if i != self._slices_in_axis(axis):
+        if i != self._slices_in_axis(axis) and not self._loc_overlaps(self.current_loc, axis):
             self._slice(axis, clear_outer=True)
 
     def _invalid_dimensions(self, dims):
@@ -235,35 +231,33 @@ class OBJECT_OT_chunk_slicer(bpy.types.Operator):
             if self.reset_origins:
                 obj.select_set(True)
             new_name = f"{orig_name}_Sliced_{i+1}"
-            print(f"renaming object: {obj.name} to {new_name}")
             obj.name = new_name
         if self.reset_origins:
             bpy.ops.object.origin_set(type='ORIGIN_GEOMETRY', center='MEDIAN')
         bpy.ops.object.select_all(action="DESELECT")
 
     def _get_slice_locs(self):
-        self.slice_locs = defaultdict(set())
+        self.slice_locs = defaultdict(list)
+
         if self.slice_type == "FIXED":
             self.num_slices = Vector([dim // self.cell_size for dim in self.dims])
             for axis in self.axes:
                 current_loc = self._get_start_loc(axis)
                 for i in range(self._slices_in_axis(axis) + 1):
                     new_loc = current_loc + self.cell_size
-                    self.slice_locs[axis].add(new_loc)
+                    self.slice_locs[axis].append(new_loc)
                     current_loc = new_loc
-                print(f"Relative slices in axis: {self._slices_in_axis(axis)}")
 
         elif self.slice_type == "RELATIVE":
-            self.cell_sizes = Vector([dim / self.slice_qty for dim in self.dims])
-            self.num_slices = Vector([self.slice_qty] * 3)
+            qty = self.slice_qty + 1
+            self.cell_sizes = Vector([dim / qty for dim in self.dims])
+            self.num_slices = Vector([qty] * 3)
             for axis in self.axes:
-                print(f"Relative slices in axis: {self._slices_in_axis(axis)}")
                 current_loc = self._get_start_loc(axis)
                 for i in range(self._slices_in_axis(axis)):
                     new_loc = current_loc + getattr(self.cell_sizes, axis)
-                    self.slice_locs[axis].add(new_loc)
+                    self.slice_locs[axis].append(new_loc)
                     current_loc = new_loc
-        print(self.slice_locs)
 
     @classmethod
     def poll(cls, context):
@@ -283,15 +277,10 @@ class OBJECT_OT_chunk_slicer(bpy.types.Operator):
             )
             return {"CANCELLED"}
         self.dims = self.obj.dimensions
-        self.slice_locs = defaultdict(list)
         self.current_obj = self.obj
         return context.window_manager.invoke_props_dialog(self)
 
     def execute(self, context):
-        self.slice_type = "FIXED"
-        self._get_slice_locs()
-        self.slice_type = "RELATIVE"
-        self.slice_qty = 5
         self._get_slice_locs()
         sliced_x = []
         sliced_y = []
@@ -331,7 +320,6 @@ class OBJECT_OT_chunk_slicer(bpy.types.Operator):
                     self._slice_operation(context)
                     sliced_y.append(self.current_obj)
                 context.collection.objects.unlink(obj)
-                print("Deleting Object on y: ", obj)
                 # context.collection.objects.unlink(obj)
         if self.z:
             self.current_axis = "z"
