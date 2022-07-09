@@ -118,13 +118,12 @@ class OBJECT_OT_chunk_slicer(bpy.types.Operator):
 
     def _get_start_loc(self, axis):
         '''Get the initial slice coordinate in an axis.'''
-        loc = min([getattr(v.co, axis) for v in self.obj.data.vertices])
+        loc = min([getattr(v.co, axis) for v in self.mesh.vertices])
         return loc
 
     def _get_end_loc(self, axis):
         '''Get the final bounds in an axis.'''
-        loc = max([getattr(v.co, axis) for v in self.obj.data.vertices])
-        return loc
+        return max([getattr(v.co, axis) for v in self.mesh.vertices])
 
     def _loc_overlaps(self, loc, axis):
         end_loc = self._get_end_loc(axis)
@@ -270,18 +269,20 @@ class OBJECT_OT_chunk_slicer(bpy.types.Operator):
         self.mesh = self.obj.data
         self.bm = bmesh.new()
         self.bm.from_mesh(self.mesh)
+
         # check for manifold geo before running operator.
-        if not self.force and not (self._mesh_has_manifold_geom()):
-            self.report(
-                {"WARNING"}, "Mesh must have manifold geometry to perform slice operation. Operation Cancelled."
-            )
-            return {"CANCELLED"}
+
         self.dims = self.obj.dimensions
         self.current_obj = self.obj
         return context.window_manager.invoke_props_dialog(self)
 
     def execute(self, context):
         self._get_slice_locs()
+        if not self.force and not (self._mesh_has_manifold_geom()):
+            self.report(
+                {"WARNING"}, "Mesh must have manifold geometry to perform slice operation. Operation Cancelled."
+            )
+            return {"CANCELLED"}
         sliced_x = []
         sliced_y = []
 
@@ -345,14 +346,14 @@ class OBJECT_OT_chunk_slicer(bpy.types.Operator):
     def draw(self, context):
         layout = self.layout
         col = layout.column(align=True)
-        col.label(text="Slice Options")
-        col.prop(self, "slice_type")
+        row = col.row()
+        row.ui_units_y += 1.3
+        row.prop(self, "slice_type")
         if self.slice_type == "FIXED":
             col.prop(self, "cell_size")
         elif self.slice_type == "RELATIVE":
             col.prop(self, "slice_qty")
-        col.separator()
-
+        col = layout.column(align=True)
         col.prop(self, "cleanup_threshold")
         col.prop(self, "reset_origins")
         row = layout.row()
@@ -362,7 +363,6 @@ class OBJECT_OT_chunk_slicer(bpy.types.Operator):
         col = layout.column(align=True)
         col.prop(self, "fill")
         col.prop(self, "force")
-        col.separator()
 
 
 classes = (OBJECT_OT_chunk_slicer,)
