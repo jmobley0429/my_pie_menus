@@ -1,5 +1,6 @@
 KEYMAP_SETTINGS = [
     {
+        "keymap_operator": "wm.call_menu_pie",
         "name": "3D View",
         "letter": "A",
         "idname": "PIE_MT_AddMesh",
@@ -10,6 +11,7 @@ KEYMAP_SETTINGS = [
         "region_type": "WINDOW",
     },
     {
+        "keymap_operator": "wm.call_menu_pie",
         "name": "Mesh",
         "letter": "A",
         "idname": "PIE_MT_AddMesh",
@@ -20,6 +22,7 @@ KEYMAP_SETTINGS = [
         "region_type": "WINDOW",
     },
     {
+        "keymap_operator": "wm.call_menu_pie",
         "name": "3D View",
         "letter": "A",
         "idname": "PIE_MT_AddOtherObjects",
@@ -30,6 +33,7 @@ KEYMAP_SETTINGS = [
         "region_type": "WINDOW",
     },
     {
+        "keymap_operator": "wm.call_menu_pie",
         "name": "Mesh",
         "letter": "X",
         "idname": "mesh.reduce_cylinder",
@@ -40,6 +44,7 @@ KEYMAP_SETTINGS = [
         "region_type": "WINDOW",
     },
     {
+        "keymap_operator": "wm.call_menu_pie",
         "name": "3D View Generic",
         "letter": "Q",
         "idname": "PIE_MT_AddModifier",
@@ -50,6 +55,7 @@ KEYMAP_SETTINGS = [
         "region_type": "WINDOW",
     },
     {
+        "keymap_operator": "wm.call_menu_pie",
         "name": "Object Mode",
         "letter": "C",
         "idname": "PIE_MT_ConvertMeshCurve",
@@ -60,6 +66,7 @@ KEYMAP_SETTINGS = [
         "region_type": "WINDOW",
     },
     {
+        "keymap_operator": "wm.call_menu_pie",
         "name": "Node Editor",
         "letter": "W",
         "idname": "NODE_OT_node_align_top",
@@ -70,6 +77,7 @@ KEYMAP_SETTINGS = [
         "region_type": "WINDOW",
     },
     {
+        "keymap_operator": "wm.call_menu_pie",
         "name": "Node Editor",
         "letter": "S",
         "idname": "NODE_OT_node_align_bottom",
@@ -80,6 +88,7 @@ KEYMAP_SETTINGS = [
         "region_type": "WINDOW",
     },
     {
+        "keymap_operator": "wm.call_menu_pie",
         "name": "Node Editor",
         "letter": "D",
         "idname": "NODE_OT_node_align_right",
@@ -90,6 +99,7 @@ KEYMAP_SETTINGS = [
         "region_type": "WINDOW",
     },
     {
+        "keymap_operator": "wm.call_menu_pie",
         "name": "Node Editor",
         "letter": "A",
         "idname": "NODE_OT_node_align_left",

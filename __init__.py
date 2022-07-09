@@ -13,6 +13,8 @@ def db_block(area: str):
     print(f"{area}\n" * 3)
 
 
+db_block("**** my_pie_menus ****")
+
 if "bpy" in locals():
     import importlib
 
@@ -64,28 +66,6 @@ classes.sort(key=lambda cls: cls.bl_idname)
 addon_keymaps = []
 
 
-def register_keymap(setting):
-    args = list(dict(sorted(setting.items())).values())
-    alt, idname, ctrl, letter, name, region_type, shift, space_type = args
-    wm = bpy.context.window_manager
-    kc = wm.keyconfigs.addon
-    km = kc.keymaps.new(name=name, space_type=space_type, region_type=region_type)
-    kmi = km.keymap_items.new('wm.call_menu_pie', letter, 'PRESS', shift=shift, ctrl=ctrl, alt=alt)
-    kmi.properties.name = idname
-    kmi.active = True
-    addon_keymaps.append((km, kmi))
-
-
-def unregister_keymaps():
-    wm = bpy.context.window_manager
-    kc = wm.keyconfigs.addon
-    if kc:
-        for km, kmi in addon_keymaps:
-            km.keymap_items.remove(kmi)
-            kc.keymaps.remove(km)
-    addon_keymaps.clear()
-
-
 def register():
     for cls in classes:
         try:
@@ -96,13 +76,14 @@ def register():
 
 
 def unregister():
-    unregister_keymaps()
+    utils.unregister_keymaps()
     for cls in reversed(classes):
         bpy.utils.unregister_class(cls)
 
 
+db_block("**** my_pie_menus ****")
 if __name__ == "__main__":
 
     register()
     for setting in KMS:
-        register_keymap(setting)
+        utils.register_keymap(setting, addon_keymaps)
