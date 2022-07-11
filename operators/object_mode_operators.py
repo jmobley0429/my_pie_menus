@@ -3,7 +3,7 @@ import bmesh
 import math
 import json
 import re
-from mathutils import Euler
+from mathutils import Euler, Vector
 from collections import defaultdict
 from pathlib import Path
 
@@ -161,10 +161,124 @@ class JG_SetUVChannels(bpy.types.Operator):
         return {'FINISHED'}
 
 
+class OBJECT_OT_sort_items_on_axis(bpy.types.Operator):
+
+    bl_idname = "object.sort_objects_on_axis"
+    bl_label = "Sort Objects on Axis"
+    bl_options = {"REGISTER", "UNDO"}
+
+    axis: bpy.props.EnumProperty(
+        name="Axis",
+        description="Axis to array items.",
+        items=[
+            ('x', 'X', "X-Axis"),
+            ('y', 'Y', "Y-Axis"),
+            ('z', 'Z', "Z-Axis"),
+        ],
+        default='x',
+    )
+    spacing_multiplier: bpy.props.FloatProperty(name="Spacing", default=1.5)
+    grid_offset: bpy.props.IntProperty(name="Grid Offset", default=6)
+    grid_axis: bpy.props.EnumProperty(
+        name="Grid Axis",
+        description="Axis on which to array items on a grid",
+        items=[
+            ('x', 'X', "X-Axis"),
+            ('y', 'Y', "Y-Axis"),
+            ('z', 'Z', "Z-Axis"),
+        ],
+        default='y',
+    )
+    initial_loc = Vector((0, 0, 0))
+
+    axes = list('xyz')
+
+    def get_obj_dim(self, obj):
+        return getattr(obj.dimensions, self.axis)
+
+    def get_grid_offset(self):
+        return max([self.get_obj_dim(obj) for obj in self.objs])
+
+    @property
+    def prev_obj(self):
+        if self.current_index == 0:
+            return self.objs[0]
+        else:
+            return self.objs[self.current_index - 1]
+
+    @property
+    def current_obj(self):
+        return self.objs[self.current_index]
+
+    def get_new_loc_tuple(self, loc):
+        coord = [0] * 3
+        index = self.axes.index(self.axis)
+        coord[index] = loc
+        return Vector(coord)
+
+    def calc_obj_loc(self):
+        obj_dim = self.get_obj_dim(self.current_obj)
+        prev_dim = self.get_obj_dim(self.prev_obj)
+        return self.get_new_loc_tuple(((obj_dim + prev_dim) / 2) * self.spacing_multiplier)
+
+    def cycle_axis(self, event, axis, axis_type="axis"):
+        current_axis_index = self.axes.index(axis)
+        if event.shift:
+            new_ax = self.axes[current_axis_index - 1]
+        else:
+            new_ax = self.axes[current_axis_index + 1]
+        setattr(self, axis_type, new_ax)
+
+    def arrange_objs(self):
+        self.current_index = 0
+        first_loc = self.initial_loc
+        for obj in self.objs:
+            if self.current_index == 0:
+                obj.location = first_loc
+            else:
+                new_loc = self.calc_obj_loc()
+                first_loc += new_loc
+                print(f"First loc after x mod: {first_loc}")
+                if self.current_index % self.grid_offset == 0:
+                    old_ax = self.axis
+                    self.axis = self.grid_axis
+                    grid_loc = self.get_new_loc_tuple(self.get_grid_offset())
+                    old_axis_orig = getattr(self.cursor_loc, old_ax)
+                    print(f"OLD:{old_axis_orig}")
+                    setattr(first_loc, old_ax, old_axis_orig)
+
+                    first_loc += grid_loc
+
+                    print(f"GRID_LOC: {grid_loc}, FIRST_LOC: {first_loc}")
+                    self.axis = old_ax
+                obj.location = first_loc
+            self.current_index += 1
+
+    @classmethod
+    def poll(cls, context):
+        return context.active_object is not None and context.selected_objects
+
+    def invoke(self, context, event):
+
+        return context.window_manager.invoke_props_popup(self, event)
+
+    def execute(self, context):
+        self.objs = context.selected_objects
+        self.original_locations = [obj.location for obj in self.objs]
+        self.num_objs = len(self.objs)
+        self.cursor_loc = context.scene.cursor.location.copy()
+        self.initial_loc = self.cursor_loc.copy()
+
+        self.arrange_objs()
+
+        return {'FINISHED'}
+
+
 classes = (
     AddCameraCustom,
     AddLightSetup,
     SetCustomBatchName,
     # delete later
     JG_SetUVChannels,
+    OBJECT_OT_sort_items_on_axis,
 )

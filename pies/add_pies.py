@@ -108,7 +108,6 @@ class PIE_MT_AddMesh(Menu):
 
         # Random
         box = pie.split().column()
-        print(box.ui_units_y)
         box.ui_units_y += 2
         op = box.operator("mesh.primitive_torus_add", text="Torus", icon="MESH_TORUS")
         op = box.operator("mesh.primitive_cone_add", text="Cone", icon="MESH_CONE")

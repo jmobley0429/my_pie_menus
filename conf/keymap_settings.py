@@ -12,6 +12,17 @@ KEYMAP_SETTINGS = [
     },
     {
         "keymap_operator": "wm.call_menu_pie",
+        "name": "Object Mode (Global)",
+        "letter": "O",
+        "idname": "PIE_MT_sort_objects",
+        "shift": 1,
+        "ctrl": 0,
+        "alt": 1,
+        "space_type": "VIEW_3D",
+        "region_type": "WINDOW",
+    },
+    {
+        "keymap_operator": "wm.call_menu_pie",
         "name": "Mesh",
         "letter": "A",
         "idname": "PIE_MT_AddMesh",
