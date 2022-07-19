@@ -25,6 +25,7 @@ if "bpy" in locals():
     importlib.reload(object_mode_operators)
     importlib.reload(node_editor_operators)
     importlib.reload(sculpt_mode_operators)
+    importlib.reload(uv_operators)
 
     importlib.reload(add_pies)
     importlib.reload(edit_mode_pies)
@@ -41,10 +42,11 @@ else:
     from my_pie_menus.operators import object_mode_operators
     from my_pie_menus.operators import node_editor_operators
     from my_pie_menus.operators import sculpt_mode_operators
+    from my_pie_menus.operators import uv_operators
 
-    from my_pie_menus.pies import add_pies
-    from my_pie_menus.pies import edit_mode_pies
-    from my_pie_menus.pies import object_mode_pies
+    from my_pie_menus.menus import add_pies
+    from my_pie_menus.menus import edit_mode_pies
+    from my_pie_menus.menus import object_mode_pies
     from my_pie_menus.conf.keymap_settings import KEYMAP_SETTINGS as KMS
 
 
@@ -58,6 +60,13 @@ modules = [
     edit_mode_pies,
     object_mode_pies,
     sculpt_mode_operators,
+    uv_operators,
+]
+
+menu_funcs = [
+    (bpy.types.IMAGE_MT_uvs_snap_pie, "append", uv_operators.origin_menu_func),
+    (bpy.types.IMAGE_MT_uvs_snap_pie, "append", uv_operators.midpoint_menu_func),
+    (bpy.types.DATA_PT_modifiers, "prepend", modifier_operators.menu_func),
 ]
 
 classes = [cls for module in modules for cls in module.classes]
@@ -73,17 +82,22 @@ def register():
         except RuntimeError:
             pass
         bpy.utils.register_class(cls)
+    for menu, action, func in menu_funcs:
+        getattr(menu, action)(func)
 
 
 def unregister():
-    utils.unregister_keymaps()
+    utils.unregister_keymaps(addon_keymaps)
     for cls in reversed(classes):
         bpy.utils.unregister_class(cls)
+    for menu, func in reversed(menu_funcs):
+        getattr(menu, "remove")(func)
 
 
-db_block("**** my_pie_menus ****")
 if __name__ == "__main__":
 
     register()
     for setting in KMS:
         utils.register_keymap(setting, addon_keymaps)
+
+    db.db_block('*****END OF REGISTER*****')

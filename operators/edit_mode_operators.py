@@ -1,10 +1,11 @@
 import bpy
+from bpy.types import Operator
 import bmesh
 import math
 from .custom_operator import CustomOperator, CustomBmeshOperator
 
 
-class MESH_OT_reduce_cylinder(CustomOperator, bpy.types.Operator):
+class MESH_OT_reduce_cylinder(CustomOperator, Operator):
     """Cut cylinder edges in half, select one edge ring and then execute."""
 
     bl_idname = "mesh.reduce_cylinder"
@@ -22,7 +23,7 @@ class MESH_OT_reduce_cylinder(CustomOperator, bpy.types.Operator):
         return {'FINISHED'}
 
 
-class MESH_OT_reduce_circle_segments(CustomOperator, bpy.types.Operator):
+class MESH_OT_reduce_circle_segments(CustomOperator, Operator):
     """Cut cylinder edges in half, select one edge ring and then execute."""
 
     bl_idname = "mesh.reduce_circle_segments"
@@ -39,7 +40,7 @@ class MESH_OT_reduce_circle_segments(CustomOperator, bpy.types.Operator):
         return {'FINISHED'}
 
 
-class MESH_OT_boundary_to_seam(CustomOperator, bpy.types.Operator):
+class MESH_OT_boundary_to_seam(CustomOperator, Operator):
     bl_idname = "mesh.boundary_to_seam"
     bl_label = "Boundary to Seam"
 
@@ -49,7 +50,7 @@ class MESH_OT_boundary_to_seam(CustomOperator, bpy.types.Operator):
         return {"FINISHED"}
 
 
-class MESH_OT_boundary_to_sharp(CustomOperator, bpy.types.Operator):
+class MESH_OT_boundary_to_sharp(CustomOperator, Operator):
     bl_idname = "mesh.boundary_to_sharp"
     bl_label = "Boundary to Sharp"
 
@@ -63,7 +64,7 @@ class MESH_OT_boundary_to_sharp(CustomOperator, bpy.types.Operator):
         return {"FINISHED"}
 
 
-class MESH_OT_increase_cylinder_res(CustomOperator, bpy.types.Operator):
+class MESH_OT_increase_cylinder_res(CustomOperator, Operator):
     """Double Cylinder Resolution"""
 
     bl_idname = "mesh.increase_cylinder_res"
@@ -120,7 +121,7 @@ class MESH_OT_increase_cylinder_res(CustomOperator, bpy.types.Operator):
         return {'FINISHED'}
 
 
-class MESH_OT_quick_tris_to_quads(CustomOperator, bpy.types.Operator):
+class MESH_OT_quick_tris_to_quads(CustomOperator, Operator):
     bl_idname = "mesh.quick_tris_to_quads"
     bl_label = "Quick Tris to Quads"
 
@@ -134,7 +135,7 @@ class MESH_OT_quick_tris_to_quads(CustomOperator, bpy.types.Operator):
         return {"FINISHED"}
 
 
-class MESH_OT_toggle_edge_weight(CustomBmeshOperator, bpy.types.Operator):
+class MESH_OT_toggle_edge_weight(CustomBmeshOperator, Operator):
 
     bl_idname = "mesh.toggle_edge_weight"
     bl_label = "Set Edge Weight"
@@ -183,7 +184,7 @@ class MESH_OT_toggle_edge_weight(CustomBmeshOperator, bpy.types.Operator):
         return {"FINISHED"}
 
 
-class MESH_OT_set_sharp_to_weighted(MESH_OT_toggle_edge_weight, CustomBmeshOperator, bpy.types.Operator):
+class MESH_OT_set_sharp_to_weighted(MESH_OT_toggle_edge_weight, CustomBmeshOperator, Operator):
     bl_idname = "mesh.set_sharp_to_weighted"
     bl_label = "Sharp To Weighted"
     bl_options = {'REGISTER', 'UNDO'}
@@ -217,32 +218,31 @@ class MESH_OT_set_sharp_to_weighted(MESH_OT_toggle_edge_weight, CustomBmeshOpera
         return {"FINISHED"}
 
 
-""  # class MESH_OT_set_sharp_to_weighted(CustomBmeshOperator, bpy.types.Operator):
-#     bl_idname = "mesh.set_sharp_to_weighted"
-#     bl_label = "Sharp to Beveled"
-#     bl_options = {"REGISTER", "UNDO"}
-#
-#     sharpness: bpy.props.IntProperty(name="Sharpness", default="30")
-#     weight_type: bpy.props.StringProperty(name='Weight Type', default="BEVEL")
-#
-#     @classmethod
-#     def poll(cls, context):
-#         return cls.edit_obj_poll(context)
-#
-#     def invoke(self, context, event):
-#         self.bmesh(context)
-#         return self.execute(context)
-#
-#     def execute(self, context):
-#         obj = self.get_active_obj()
-#         edges = self.sel_edges
-#         bpy.ops.mesh.select_all(action="DESELECT")
-#         bpy.ops.mesh.edges_select_sharp(sharpness=self.sharpness)
-#         bpy.ops.mesh.toggle_edge_weight(weight_type=self.weight_type)
-#         for edge in edges:
-#             edge.select = True
-#         self.bm.update_edit_mesh(obj.data)
-#         return {"FINISHED"}
+class MESH_OT_weld_verts_to_active(Operator):
+
+    '''Weld all selected verts to active vertex.'''
+
+    bl_idname = "mesh.weld_verts_to_active"
+    bl_label = "Weld to Active"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    @classmethod
+    def poll(cls, context):
+        obj = context.active_object
+        return obj is not None and obj.type == "MESH" and "EDIT" in context.mode
+
+    def get_bmesh(self, context):
+        self.obj = context.edit_object
+        self.mesh = self.obj.data
+        self.bm = bmesh.from_edit_mesh(self.mesh)
+
+    def execute(self, context):
+        try:
+            bpy.ops.view3d.snap_selected_to_active()
+            bpy.ops.mesh.remove_doubles(use_unselected=True)
+        except RuntimeError:
+            bpy.ops.mesh.merge(type="CENTER")
+        return {"FINISHED"}
 
 
 classes = (
@@ -254,4 +254,5 @@ classes = (
     MESH_OT_quick_tris_to_quads,
     MESH_OT_toggle_edge_weight,
     MESH_OT_set_sharp_to_weighted,
+    MESH_OT_weld_verts_to_active,
 )

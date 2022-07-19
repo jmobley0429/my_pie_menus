@@ -27,6 +27,9 @@ class CustomOperator:
     def to_mode(self, mode):
         bpy.ops.object.mode_set(mode=mode)
 
+    def in_mode(self, context, mode):
+        return mode in context.mode
+
     def get_mod_and_target_objects(self):
         target = self.get_active_obj()
         objs = set(self.get_selected_objects())
@@ -91,6 +94,12 @@ class CustomModalOperator(CustomOperator):
             return {'CANCELLED'}
         return {'FINISHED'}
 
+    def set_numpad_input(self, event):
+        if event.type == "BACKSPACE":
+            self.numpad_value.pop()
+        else:
+            self.numpad_value.append(event.ascii)
+
     @property
     def string_numpad_value(self):
         return ''.join(self.numpad_value)
@@ -107,8 +116,10 @@ class CustomModalOperator(CustomOperator):
         '''Takes a string of info for the
         modal and displays it in the UI Header'''
         if self.numpad_value:
-            msg += f" Input : {self.string_numpad_value}"
-        context.area.header_text_set(msg)
+            inp_msg = f", Input : {self.string_numpad_value}"
+        else:
+            inp_msg = ''
+        context.area.header_text_set(msg + inp_msg)
 
     def _clear_info(self, context):
         context.area.header_text_set(None)
@@ -117,9 +128,10 @@ class CustomModalOperator(CustomOperator):
 class CustomBmeshOperator(CustomOperator):
     @classmethod
     def bmesh(cls, context):
-        cls.me = context.edit_object.data
-        bm = bmesh.from_edit_mesh(cls.me)
+        cls.mesh = context.edit_object.data
+        bm = bmesh.from_edit_mesh(cls.mesh)
         cls.bm = bm
+        print(cls.bm)
 
     @classmethod
     def new_bmesh(cls, mesh_name):
@@ -145,8 +157,11 @@ class CustomBmeshOperator(CustomOperator):
 
     def select_sharp_edges(self, bm, threshold):
         for edge in bm.edges[:]:
-            angle = edge.calc_face_angle()
-            if angle >= threshold:
+            try:
+                angle = edge.calc_face_angle()
+            except ValueError:
+                angle = None
+            if angle is not None and angle >= threshold:
                 edge.select = True
             else:
                 edge.select = False
@@ -179,3 +194,55 @@ class ModalDrawText:
 
 
 classes = [CustomOperator, CustomModalOperator]
+
+
+bl_info = {
+    "name": "Set Shade Auto Smooth",
+    "author": "X Y",
+    "version": (0, 1),
+    "blender": (2, 80, 0),
+    "location": "View3D",
+    "description": "Set Shade Auto Smooth with one Click",
+    "category": "Object",
+}
+
+import bpy
+
+
+class OBJECT_OT_shade_auto_smooth(bpy.types.Operator):
+    bl_idname = "object.shade_auto_smooth"
+    bl_label = "Shade Auto Smooth"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    # put checking for object type and correct context
+    # in the poll method rather than execute.
+    @classmethod
+    def poll(cls, context):
+        return context.object is not None and context.object.type in {"MESH", "CURVE"}
+
+    def execute(self, context):
+        # allows for use in edit mode and object mode alike.
+        in_edit = 'EDIT' in context.mode
+        if in_edit:
+            bpy.ops.object.mode_set(mode="OBJECT")
+        # using one operator call to act on all selected objects
+        # rather than looping over every polygon
+        bpy.ops.object.shade_smooth()
+        for obj in context.selected_objects:
+            if obj.type == "MESH":
+                obj.data.use_auto_smooth = True
+        if in_edit:
+            bpy.ops.object.mode_set(mode="EDIT")
+        return {'FINISHED'}
+
+
+def register():
+    bpy.utils.register_class(OBJECT_OT_shade_auto_smooth)
+
+
+def unregister():
+    bpy.utils.unregister_class(OBJECT_OT_shade_auto_smooth)
+
+
+if __name__ == "__main__":
+    register()

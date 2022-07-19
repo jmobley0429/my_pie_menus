@@ -3,6 +3,7 @@ from statistics import mean
 
 
 import bpy
+from bpy.types import Operator
 import bmesh
 import math
 from math import pi
@@ -11,7 +12,7 @@ from mathutils import Vector
 from .custom_operator import CustomOperator, CustomModalOperator, ModalDrawText
 
 
-class CustomAddMirrorModifier(CustomOperator, bpy.types.Operator):
+class CustomAddMirrorModifier(CustomOperator, Operator):
     """Add Mirror Custom Modifier"""
 
     bl_idname = "object.custom_mirror_modifier"
@@ -48,6 +49,7 @@ class CustomAddMirrorModifier(CustomOperator, bpy.types.Operator):
             mirror_mod.use_bisect_axis[i] = False
         mirror_mod.use_axis[axis_index] = True
         mirror_mod.use_bisect_axis[axis_index] = True
+        mirror_mod.use_mirror_u = True
         mirror_mod.use_clip = True
         if self.mirror_type not in {
             "Z_POS",
@@ -142,6 +144,9 @@ class BevelModifier(CustomOperator):
         return mean(obj.dimensions) / 65
 
     def _add_bevel_modifier(self, harden_normals=True, profile=0.5):
+        in_edit_mode = bool(bpy.context.object.mode == "EDIT")
+        if in_edit_mode:
+            bpy.ops.object.mode_set(mode="OBJECT")
 
         obj = self.get_active_obj()
 
@@ -155,9 +160,11 @@ class BevelModifier(CustomOperator):
         bevel_mod.harden_normals = harden_normals
         bevel_mod.miter_outer = "MITER_ARC"
         bevel_mod.use_clamp_overlap = False
+        if in_edit_mode:
+            bpy.ops.object.mode_set(mode="EDIT")
 
 
-class CustomAddBevelModifier(BevelModifier, bpy.types.Operator):
+class CustomAddBevelModifier(BevelModifier, Operator):
     """Add Custom Bevel Modifier"""
 
     bl_idname = "object.custom_bevel_modifier"
@@ -171,7 +178,7 @@ class CustomAddBevelModifier(BevelModifier, bpy.types.Operator):
         return {"FINISHED"}
 
 
-class CustomAddQuickBevSubSurfModifier(BevelModifier, bpy.types.Operator):
+class CustomAddQuickBevSubSurfModifier(BevelModifier, Operator):
     """Add Custom Bevel Modifier with Subsurf"""
 
     bl_idname = "object.custom_bevel_subsurf_modifier"
@@ -191,7 +198,7 @@ class CustomAddQuickBevSubSurfModifier(BevelModifier, bpy.types.Operator):
         return {"FINISHED"}
 
 
-class CustomWeightedNormal(CustomOperator, bpy.types.Operator):
+class CustomWeightedNormal(CustomOperator, Operator):
     """Add Custom Weighted Normal Modifier"""
 
     bl_idname = "object.custom_weighted_normal"
@@ -207,7 +214,7 @@ class CustomWeightedNormal(CustomOperator, bpy.types.Operator):
         return {"FINISHED"}
 
 
-class CustomSimpleDeform(CustomModalOperator, bpy.types.Operator):
+class CustomSimpleDeform(CustomModalOperator, Operator):
     """Add Custom Simple Deform Modifier"""
 
     bl_idname = "object.custom_simple_deform"
@@ -257,7 +264,7 @@ class CustomSimpleDeform(CustomModalOperator, bpy.types.Operator):
         return {'RUNNING_MODAL'}
 
 
-class CustomShrinkwrap(CustomOperator, bpy.types.Operator):
+class CustomShrinkwrap(CustomOperator, Operator):
     """Add Custom Shrinkwrap Modifier"""
 
     bl_options = {"REGISTER", "UNDO"}
@@ -280,7 +287,7 @@ class CustomShrinkwrap(CustomOperator, bpy.types.Operator):
         return {"FINISHED"}
 
 
-class CustomLattice(CustomOperator, bpy.types.Operator):
+class CustomLattice(CustomOperator, Operator):
     """Add Custom Lattice Modifier"""
 
     bl_idname = "object.custom_lattice"
@@ -296,7 +303,7 @@ class CustomLattice(CustomOperator, bpy.types.Operator):
         return {"FINISHED"}
 
 
-class CustomRemesh(CustomOperator, bpy.types.Operator):
+class CustomRemesh(CustomOperator, Operator):
     """Add Custom Remesh Modifier"""
 
     bl_idname = "object.custom_remesh"
@@ -311,7 +318,7 @@ class CustomRemesh(CustomOperator, bpy.types.Operator):
         return {"FINISHED"}
 
 
-class CustomDecimate(CustomOperator, bpy.types.Operator):
+class CustomDecimate(CustomOperator, Operator):
     """Add Custom Decimate Modifier"""
 
     bl_options = {"REGISTER", "UNDO"}
@@ -342,7 +349,7 @@ class CustomDecimate(CustomOperator, bpy.types.Operator):
         return {"FINISHED"}
 
 
-class ArrayModalOperator(CustomModalOperator, bpy.types.Operator):
+class ArrayModalOperator(CustomModalOperator, Operator):
     """Move an object with the mouse, example"""
 
     bl_idname = "object.array_modal"
@@ -459,7 +466,7 @@ class ArrayModalOperator(CustomModalOperator, bpy.types.Operator):
             return {'CANCELLED'}
 
 
-class SolidifyModalOperator(CustomModalOperator, bpy.types.Operator):
+class SolidifyModalOperator(CustomModalOperator, Operator):
     bl_idname = "object.solidify_modal"
     bl_label = "Solidify Modal"
 
@@ -519,7 +526,7 @@ class SolidifyModalOperator(CustomModalOperator, bpy.types.Operator):
             return {'CANCELLED'}
 
 
-class ScrewModalOperator(CustomModalOperator, bpy.types.Operator):
+class ScrewModalOperator(CustomModalOperator, Operator):
     bl_idname = "object.screw_modal"
     bl_label = "Screw Modal"
 
@@ -608,7 +615,7 @@ class ScrewModalOperator(CustomModalOperator, bpy.types.Operator):
             return {'CANCELLED'}
 
 
-class AddLatticeCustom(CustomOperator, bpy.types.Operator):
+class AddLatticeCustom(CustomOperator, Operator):
     bl_idname = "object.smart_add_lattice"
     bl_label = "Add Smart Lattice"
     bl_options = {"REGISTER", "UNDO"}
@@ -645,7 +652,7 @@ class AddLatticeCustom(CustomOperator, bpy.types.Operator):
         return {'FINISHED'}
 
 
-class AddDisplaceCustom(CustomModalOperator, bpy.types.Operator):
+class AddDisplaceCustom(CustomModalOperator, Operator):
     bl_idname = "object.custom_displace"
     bl_label = "Add Custom Displace"
     bl_options = {"REGISTER", "UNDO"}
@@ -1036,6 +1043,85 @@ class AddDisplaceCustom(CustomModalOperator, bpy.types.Operator):
         return {"RUNNING_MODAL"}
 
 
+class ToggleClipping(Operator):
+    bl_idname = "object.toggle_mirror_clipping"
+    bl_label = "Toggle Clipping"
+    bl_description = "Toggles Clipping on Any Mirror Modifiers"
+    bl_options = {'REGISTER'}
+
+    @classmethod
+    def poll(cls, context):
+        return context.active_object is not None
+
+    def execute(self, context):
+        obj = context.active_object
+        mods = [mod for mod in obj.modifiers[:] if mod.type == "MIRROR"]
+        if mods:
+            for mod in mods:
+                clip_state = mod.use_clip
+                mod.use_clip = not clip_state
+        return {"FINISHED"}
+
+
+class ToggleSubDivVisibility(Operator):
+    bl_idname = "object.toggle_subdiv_vis"
+    bl_label = "Toggle SubDiv Vis"
+    bl_description = "Toggles Subdiv Visibility"
+    bl_options = {'REGISTER'}
+
+    def invoke(self, context, event):
+        self.sel_objs = context.selected_objects
+        self.show_viewport = self.min_subsurf_visibility
+
+        return self.execute(context)
+
+    @property
+    def ss_objs(self):
+        objs = []
+        for obj in self.sel_objs:
+            mods = [mod.type for mod in obj.modifiers[:]]
+            if "SUBSURF" in mods:
+                objs.append(obj)
+        return objs
+
+    def is_visible(self, obj):
+        for mod in obj.modifiers[:]:
+            if mod.type == "SUBSURF":
+                return mod.show_viewport
+
+    @property
+    def min_subsurf_visibility(self):
+        status = [self.is_visible(obj) for obj in self.ss_objs]
+        return min(status)
+
+    def toggle_subsurf(self, obj):
+        mods = [mod for mod in obj.modifiers[:] if mod.type == "SUBSURF"]
+        if mods:
+            for mod in mods:
+                visible = mod.show_viewport
+                mod.show_viewport = not self.show_viewport
+
+    @classmethod
+    def poll(cls, context):
+        return context.active_object is not None
+
+    def execute(self, context):
+        for obj in self.ss_objs:
+            self.toggle_subsurf(obj)
+
+        return {"FINISHED"}
+
+
+def menu_func(self, context):
+    layout = self.layout
+    if context.active_object:
+        if len(context.active_object.modifiers):
+            col = self.layout.column(align=True)
+            row = col.row(align=True)
+            row.operator(ToggleClipping.bl_idname, icon='MOD_MIRROR', text="Toggle Clipping")
+            row.operator(ToggleSubDivVisibility.bl_idname, icon='MOD_SUBSURF', text="Toggle SubSurf Vis")
+
+
 classes = {
     CustomAddBevelModifier,
     CustomAddQuickBevSubSurfModifier,
@@ -1051,4 +1137,6 @@ classes = {
     ScrewModalOperator,
     AddLatticeCustom,
     AddDisplaceCustom,
+    ToggleSubDivVisibility,
+    ToggleClipping,
 }
