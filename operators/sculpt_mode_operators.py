@@ -1,26 +1,67 @@
 import bpy
 
 
-class ToggleStabilizeStroke(bpy.types.Operator):
+class Brush:
+    def __init__(self, context):
+        self.context = context
+        self.mode = context.mode
+        self.ts = context.tool_settings
 
-    bl_idname = "sculpt.toggle_stabilize_stroke"
+        BRUSH_ATTRIBUTES = {
+            "SCULPT": {
+                "brush": self.ts.sculpt.brush,
+                "settings": self.ts.sculpt.brush,
+                "ss_attr": "use_smooth_stroke",
+                "ss_radius_attr": "smooth_stroke_radius",
+            },
+            "PAINT_GPENCIL": {
+                "brush": self.ts.gpencil_paint.brush,
+                "settings": self.ts.gpencil_paint.brush.gpencil_settings,
+                "ss_attr": "use_settings_stabilizer",
+                "ss_radius": "use_settings_stabilizer",
+            },
+        }
+        self.brush_attrs = BRUSH_ATTRIBUTES[self.mode]
+
+    @property
+    def brush(self):
+        return self.brush_attrs["brush"]
+
+    @property
+    def settings(self):
+        return self.brush_attrs["settings"]
+
+    @property
+    def ss_attr(self):
+        return self.brush_attrs["ss_attr"]
+
+    @property
+    def use_smooth_stroke(self):
+        attr = self.brush_attrs["ss_attr"]
+        return getattr(self.settings, attr)
+
+
+class BRUSH_OT_toggle_stabilize_stroke(bpy.types.Operator):
+
+    bl_idname = "brush.toggle_stabilize_stroke"
     bl_label = "Toggle Stabilize Stroke"
     bl_options = {"REGISTER", "UNDO"}
 
     @classmethod
     def poll(cls, context):
-        return context.active_object is not None and context.mode == "SCULPT"
+        return context.mode in {"SCULPT", "PAINT_GPENCIL"}
 
     def execute(self, context):
-        brush = context.tool_settings.sculpt.brush
-        val = brush.use_smooth_stroke
-        brush.use_smooth_stroke = not val
+        br = Brush(context)
+        settings = br.brush
+        attr = br.ss_attr
+        setattr(settings, attr, not br.use_smooth_stroke)
         return {'FINISHED'}
 
 
-class AdjustStabilizeStrokeRadius(bpy.types.Operator):
+class BRUSH_OT_adjust_stabilize_radius(bpy.types.Operator):
 
-    bl_idname = "sculpt.adjust_ss_radius"
+    bl_idname = "brush.adjust_stabilize_radius"
     bl_label = "Adjust Stabilize Stroke Radius"
     bl_options = {"REGISTER", "UNDO"}
 
@@ -28,25 +69,22 @@ class AdjustStabilizeStrokeRadius(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context):
-        obj = context.active_object
-        mode = context.mode
-        brush = context.tool_settings.sculpt.brush
-        return obj is not None and mode == "SCULPT" and brush.use_smooth_stroke == True
+        cls.br = Brush(context)
+        mode = context.mode in {"SCULPT", "PAINT_GPENCIL"}
+        use_ss = cls.br.use_smooth_stroke
+        return all([mode, use_ss])
 
     def invoke(self, context, event):
-        self.radius = context.tool_settings.sculpt.brush.smooth_stroke_radius
+        self.brush = self.br.brush
+        self.radius = self.brush.smooth_stroke_radius
         return context.window_manager.invoke_props_popup(self, event)
 
     def execute(self, context):
-        self.change_radius(context)
+        self.brush.smooth_stroke_radius = self.radius
         return {'FINISHED'}
-
-    def change_radius(self, context):
-        brush = context.tool_settings.sculpt.brush
-        brush.smooth_stroke_radius = self.radius
 
 
 classes = [
-    ToggleStabilizeStroke,
-    AdjustStabilizeStrokeRadius,
+    BRUSH_OT_toggle_stabilize_stroke,
+    BRUSH_OT_adjust_stabilize_radius,
 ]
