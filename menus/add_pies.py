@@ -217,6 +217,7 @@ class PIE_MT_AddModifier(Menu):
         return ob and ob.type != 'GPENCIL'
 
     def draw(self, context):
+        obj = context.active_object
         layout = self.layout
         pie = layout.menu_pie()
 
@@ -244,8 +245,9 @@ class PIE_MT_AddModifier(Menu):
         box = pie.split().column()
         box.operator('object.custom_bevel_modifier', text="Bevel", icon="MOD_BEVEL")
         box.operator('object.custom_bevel_subsurf_modifier', text="Bevel Subsurf", icon="MOD_SUBSURF")
-        op = box.operator('object.modifier_add', text="Weighted Normal", icon="MOD_NORMALEDIT")
-        op.type = "WEIGHTED_NORMAL"
+        if obj.type == "MESH":
+            op = box.operator('object.modifier_add', text="Weighted Normal", icon="MOD_NORMALEDIT")
+            op.type = "WEIGHTED_NORMAL"
         # Bottom -- Deform
         box = pie.split().column()
         box.operator("object.custom_simple_deform", text="Bend", icon="MOD_SIMPLEDEFORM")

@@ -75,49 +75,16 @@ class MESH_OT_increase_cylinder_res(CustomOperator, Operator):
     def poll(cls, context):
         return cls.edit_obj_poll(context)
 
-    @staticmethod
-    def subdivide():
-        bpy.ops.object.mode_set(mode="OBJECT")
-        bpy.ops.object.modifier_add(type="SUBSURF")
-        bpy.ops.object.convert(target='MESH')
-        bpy.ops.object.mode_set(mode="EDIT")
-
-    @staticmethod
-    def simplify_mesh():
-        deg = math.radians(5)
-        bpy.ops.mesh.select_all(action='SELECT')
-        bpy.ops.mesh.dissolve_limited(angle_limit=deg)
-        bpy.ops.mesh.quads_convert_to_tris()
-        bpy.ops.mesh.tris_convert_to_quads()
-
-    def get_bm(self, obj):
-        return bmesh.from_edit_mesh(obj.data)
-
-    def edit_crease(self, obj, degrees=50, set=True):
-        bm = self.get_bm(obj)
-        edges = bm.edges[:]
-        deg = math.radians(degrees)
-        crease_layer = bm.edges.layers.crease.verify()
-        for edge in edges:
-            if set:
-                try:
-                    sharpness = edge.calc_face_angle()
-                except ValueError:
-                    sharpness = 0
-                if sharpness > deg:
-                    edge[crease_layer] = 1
-            else:
-                edge[crease_layer] = 0
-        bmesh.update_edit_mesh(obj.data)
-
     def execute(self, context):
-        obj = context.active_object
-        self.edit_crease(obj)
-        self.subdivide()
-        obj = context.active_object
-        self.edit_crease(obj, set=False)
-        obj = context.active_object
-        self.simplify_mesh()
+        obj = bpy.context.edit_object
+        me = obj.data
+        bm = bmesh.from_edit_mesh(me)
+        bpy.ops.mesh.loop_multi_select(ring=True)
+        bpy.ops.mesh.loop_multi_select(ring=False)
+        sel_edges = [e for e in bm.edges[:] if e.select]
+        bmesh.ops.subdivide_edges(bm, edges=sel_edges, cuts=1)
+        bmesh.update_edit_mesh(me)
+        bpy.ops.mesh.looptools_circle()
         return {'FINISHED'}
 
 
@@ -139,6 +106,12 @@ class MESH_OT_toggle_edge_weight(CustomBmeshOperator, Operator):
 
     bl_idname = "mesh.toggle_edge_weight"
     bl_label = "Set Edge Weight"
+    desc_vals = [
+        "Set edge weight on selected edges. Default toggle all selected edges to opposite value.",
+        "CTRL - Clear all edges.",
+        "ALT - Set all edges weight to 1",
+    ]
+    bl_description = '\n'.join(desc_vals)
     bl_options = {'REGISTER', 'UNDO'}
 
     weight_type: bpy.props.StringProperty(name='Weight Type')
@@ -171,14 +144,14 @@ class MESH_OT_toggle_edge_weight(CustomBmeshOperator, Operator):
                 self.bmesh(context)
                 self.set_edges_weight()
 
-    def verify_weight_layer(self, bm):
+    def verify_weight_layer(self):
         if self.weight_type == "BEVEL":
-            self.weight_layer = bm.edges.layers.bevel_weight.verify()
+            self.weight_layer = self.bm.edges.layers.bevel_weight.verify()
         elif self.weight_type == "CREASE":
-            self.weight_layer = bm.edges.layers.crease.verify()
+            self.weight_layer = self.bm.edges.layers.crease.verify()
 
     def execute(self, context):
-        self.verify_weight_layer(self.bm)
+        self.verify_weight_layer()
         self.set_edges_weight()
         bmesh.update_edit_mesh(context.edit_object.data)
         return {"FINISHED"}
@@ -208,9 +181,38 @@ class MESH_OT_set_sharp_to_weighted(MESH_OT_toggle_edge_weight, CustomBmeshOpera
         obj = self.get_active_obj()
         stored_edges = [e for e in self.sel_edges]
         self.select_edges(context, self.bm.edges[:], select=False)
-        self.select_sharp_edges(self.bm, threshold=self.sharp_angle)
-        self.verify_weight_layer(self.bm)
+        self.select_sharp_edges(threshold=self.sharp_angle)
+        self.verify_weight_layer()
         self.set_edges_weight()
+        if stored_edges:
+            self.select_edges(context, self.bm.edges[:], select=False)
+            self.select_edges(context, stored_edges, select=True)
+        bmesh.update_edit_mesh(context.edit_object.data)
+        return {"FINISHED"}
+
+
+class MESH_OT_set_boundary_to_weighted(MESH_OT_toggle_edge_weight, CustomBmeshOperator, Operator):
+    bl_idname = "mesh.set_boundary_to_weighted"
+    bl_label = "Boundary To Weighted"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    weight_type: bpy.props.StringProperty(name="Weight Type", default="BEVEL")
+
+    @classmethod
+    def poll(cls, context):
+        return cls.edit_obj_poll(context)
+
+    def invoke(self, context, event):
+        self.bmesh(context)
+        return self.execute(context)
+
+    def execute(self, context):
+        obj = self.get_active_obj()
+        stored_edges = [e for e in self.sel_edges]
+        self.select_edges(context, self.bm.edges[:], select=False, skip_callback_func=self.is_boundary_edge)
+        self.verify_weight_layer()
+        self.set_edges_weight()
+        self.bmesh(context)
         if stored_edges:
             self.select_edges(context, self.bm.edges[:], select=False)
             self.select_edges(context, stored_edges, select=True)
@@ -245,6 +247,26 @@ class MESH_OT_weld_verts_to_active(Operator):
         return {"FINISHED"}
 
 
+class VIEW3D_OT_toggle_annotate(Operator):
+    bl_idname = "view3d.toggle_annotate"
+    bl_label = "Toggle Annotate"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    @classmethod
+    def poll(cls, context):
+        return True
+
+    def execute(self, context):
+        tools = context.workspace.tools
+        mode = context.mode
+        curr_tool = tools.from_space_view3d_mode(mode, create=False).idname
+        if curr_tool != "builtin.annotate":
+            bpy.ops.wm.tool_set_by_id(name="builtin.annotate")
+        else:
+            bpy.ops.wm.tool_set_by_id(name="builtin.select_box")
+        return {"FINISHED"}
+
+
 classes = (
     MESH_OT_reduce_cylinder,
     MESH_OT_reduce_circle_segments,
@@ -254,5 +276,7 @@ classes = (
     MESH_OT_quick_tris_to_quads,
     MESH_OT_toggle_edge_weight,
     MESH_OT_set_sharp_to_weighted,
+    MESH_OT_set_boundary_to_weighted,
     MESH_OT_weld_verts_to_active,
+    VIEW3D_OT_toggle_annotate,
 )

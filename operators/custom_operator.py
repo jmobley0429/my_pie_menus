@@ -131,7 +131,6 @@ class CustomBmeshOperator(CustomOperator):
         cls.mesh = context.edit_object.data
         bm = bmesh.from_edit_mesh(cls.mesh)
         cls.bm = bm
-        print(cls.bm)
 
     @classmethod
     def new_bmesh(cls, mesh_name):
@@ -155,21 +154,31 @@ class CustomBmeshOperator(CustomOperator):
     def is_face(element):
         return isinstance(element, bmesh.types.BMFace)
 
-    def select_sharp_edges(self, bm, threshold):
-        for edge in bm.edges[:]:
-            try:
-                angle = edge.calc_face_angle()
-            except ValueError:
-                angle = None
-            if angle is not None and angle >= threshold:
-                edge.select = True
-            else:
-                edge.select = False
+    def select_sharp_edges(self, threshold):
+        if self.bm:
+            for edge in self.bm.edges[:]:
+                try:
+                    angle = edge.calc_face_angle()
+                except ValueError:
+                    angle = None
+                if angle is not None and angle >= threshold:
+                    edge.select = True
+                else:
+                    edge.select = False
 
-    def select_edges(self, context, edges, select=True):
+    @staticmethod
+    def is_boundary_edge(edge):
+        num_faces = len(list(filter(lambda face: face.select, edge.link_faces[:])))
+        return num_faces == 1
+
+    def select_edges(self, context, edges, select=True, skip_callback_func=None):
         try:
             for edge in edges:
                 edge.select = select
+                if skip_callback_func is not None:
+                    if skip_callback_func(edge):
+                        edge.select = not select
+
         except ReferenceError:
             self.bmesh(context)
             self.select_edges(context, edges, select=select)

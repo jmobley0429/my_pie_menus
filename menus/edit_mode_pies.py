@@ -31,6 +31,9 @@ class PIE_MT_edge_menu(Menu):
         op = col.operator("mesh.toggle_edge_weight", text="Toggle Bevel Weight")
         op.weight_type = "BEVEL"
         op = col.operator("mesh.set_sharp_to_weighted", text="Sharp to Beveled")
+        op.weight_type = "BEVEL"
+        op = col.operator("mesh.set_boundary_to_weighted", text="Boundary to Beveled")
+        op.weight_type = "BEVEL"
         # Bottom - Select Edge loops/rings
         bx = pie.split().box()
         bx.label(text="Select Edges")
@@ -54,7 +57,7 @@ class PIE_MT_edge_menu(Menu):
         col.operator("mesh.boundary_to_sharp")
         #
         col = pie.split().column()
-        col.operator("mesh.bridge_edge_loops")
+        col.operator("mesh.increase_cylinder_res")
         col.operator("mesh.subdivide")
         #
         # Right
@@ -62,6 +65,8 @@ class PIE_MT_edge_menu(Menu):
         op = col.operator("mesh.toggle_edge_weight", text="Toggle Crease")
         op.weight_type = "CREASE"
         op = col.operator("mesh.set_sharp_to_weighted", text="Sharp to Creased")
+        op.weight_type = "CREASE"
+        op = col.operator("mesh.set_boundary_to_weighted", text="Boundary to Creased")
         op.weight_type = "CREASE"
 
         # Bottom
@@ -87,8 +92,26 @@ class VIEW3D_MT_merge_verts_pie(Menu):
         op.use_unselected = True
 
 
+class MESH_MT_PIE_loop_tools(Menu):
+    bl_label = "Loop Tools"
+    bl_idname = "MESH_MT_PIE_loop_tools"
+
+    def draw(self, context):
+        layout = self.layout
+        pie = layout.menu_pie()
+        op = pie.operator("mesh.looptools_bridge")
+        op = pie.operator("mesh.looptools_circle")
+        op = pie.operator("mesh.looptools_curve")
+        op = pie.operator("mesh.looptools_flatten")
+        op = pie.operator("mesh.looptools_gstretch")
+        op = pie.operator("mesh.looptools_loft")
+        op = pie.operator("mesh.looptools_relax")
+        op = pie.operator("mesh.looptools_space")
+
+
 classes = (
     MESH_MT_PIE_symmetrize,
     PIE_MT_edge_menu,
     VIEW3D_MT_merge_verts_pie,
+    MESH_MT_PIE_loop_tools,
 )

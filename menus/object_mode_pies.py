@@ -126,8 +126,34 @@ class OBJECT_MT_object_io_menu(Menu):
         pie.operator("export_scene.obj", text="Export OBJ")
 
 
+class OBJECT_MT_quick_transform_pie(Menu):
+    bl_idname = "OBJECT_MT_quick_transform_pie"
+    bl_label = "Quick Transform"
+
+    def draw(self, context):
+        layout = self.layout
+        pie = layout.menu_pie()
+        box = pie.box()
+        box.label(text="Rotate 90")
+        val = 90
+        spl = box.split()
+        op = spl.operator("object.quick_transform", text="X")
+        op.axis = "X"
+        op.transform_type = "Rotate"
+        op.transform_amt = val
+        op = spl.operator("object.quick_transform", text="Y")
+        op.axis = "Y"
+        op.transform_type = "Rotate"
+        op.transform_amt = val
+        op = spl.operator("object.quick_transform", text="Z")
+        op.axis = "Z"
+        op.transform_type = "Rotate"
+        op.transform_amt = val
+
+
 classes = (
     PIE_MT_ConvertMeshCurve,
     OBJECT_MT_object_io_menu,
     PIE_MT_sort_objects,
+    OBJECT_MT_quick_transform_pie,
 )

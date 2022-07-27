@@ -4,6 +4,20 @@ import math
 import json
 from mathutils import Euler
 from collections import defaultdict
+import numpy as np
+
+
+def convert_bbox_to_world(bbox, mx):
+    num_points = len(bbox)
+    coords_4d = np.ones((num_points, 4), 'f')
+    coords_4d[:, :-1] = bbox
+    return np.einsum('ij,aj->ai', mx, coords_4d)[:, :-1]
+
+
+def get_bbox_center(obj, matrix_world):
+    bounds = np.array([v[:] for v in obj.bound_box])
+    ws_bbox = convert_bbox_to_world(bounds, matrix_world)
+    return ws_bbox.sum(0) / len(bounds)
 
 
 def get_active_obj():
@@ -19,6 +33,13 @@ def get_loc_matrix_from_cursor(self, context):
     scale = Vector((1.0, 1.0, 1.0))
     loc = context.scene.cursor.matrix.translation
     return Matrix().LocRotScale(loc, rot, scale)
+
+
+def set_parent(obj, parent_obj, keep_offset=False):
+    orig_loc = obj.matrix_world.translation.copy()
+    obj.parent = parent_obj
+    if not keep_offset:
+        obj.matrix_world.translation = orig_loc
 
 
 def write_mesh_data_to_json(obj, file_name=""):

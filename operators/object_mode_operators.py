@@ -1,16 +1,15 @@
 import bpy
 import bmesh
-import math
 import json
 import re
-from statistics import mean
+import numpy as np
 from mathutils import Euler, Vector
 from collections import defaultdict
 from pathlib import Path
 from bpy.types import Operator
 
 from .custom_operator import CustomOperator, CustomModalOperator
-from ..resources.utils import clamp
+from my_pie_menus.resources import utils
 
 
 class AddCameraCustom(Operator):
@@ -205,11 +204,7 @@ class AlignOperator:
         return [obj for obj in context.selected_objects if obj.parent is None]
 
 
-class OBJECT_OT_sort_items_on_axis(
-    AlignOperator,
-    CustomModalOperator,
-    Operator,
-):
+class OBJECT_OT_sort_items_on_axis(AlignOperator, CustomModalOperator, Operator):
 
     bl_idname = "object.sort_objects_on_axis"
     bl_label = "Sort Objects on Axis"
@@ -237,7 +232,7 @@ class OBJECT_OT_sort_items_on_axis(
         return max([self.get_obj_dim(obj) for obj in self.objs])
 
     def set_grid_offset(self, addend):
-        self.grid_offset = clamp(self.grid_offset + addend, 1, self.num_objs)
+        self.grid_offset = np.clip(self.grid_offset + addend, 1, self.num_objs)
 
     @property
     def prev_obj(self):
@@ -325,7 +320,7 @@ class OBJECT_OT_sort_items_on_axis(
     def sort_objs_size(self, average=True):
         def get_obj_dims(obj):
             if average:
-                return mean(obj.location)
+                return np.np(obj.location)
             else:
                 return getattr(obj.location, self.axis)
 
@@ -440,7 +435,7 @@ class OBJECT_OT_set_auto_smooth_modal(CustomModalOperator, Operator):
         bpy.ops.mesh.customdata_custom_splitnormals_clear()
         bpy.ops.object.shade_smooth()
         self.me.use_auto_smooth = True
-        self.me.auto_smooth_angle = math.radians(self.current_angle)
+        self.me.auto_smooth_angle = np.radians(self.current_angle)
 
     @classmethod
     def poll(cls, context):
@@ -463,9 +458,9 @@ class OBJECT_OT_set_auto_smooth_modal(CustomModalOperator, Operator):
 
     def change_smoothing_angle(self, context, event, set_angle=False):
         if set_angle:
-            self.me.auto_smooth_angle = math.radians(self.current_angle)
+            self.me.auto_smooth_angle = np.radians(self.current_angle)
             return
-        current_angle = math.degrees(self.me.auto_smooth_angle)
+        current_angle = np.degrees(self.me.auto_smooth_angle)
         addend = 5
         if event.shift:
             addend = 1
@@ -474,7 +469,7 @@ class OBJECT_OT_set_auto_smooth_modal(CustomModalOperator, Operator):
             addend *= -1
         raw_angle = current_angle + addend
         self.current_angle = round(raw_angle / divisor) * divisor
-        self.me.auto_smooth_angle = math.radians(self.current_angle)
+        self.me.auto_smooth_angle = np.radians(self.current_angle)
 
     def invoke(self, context, event):
         self.obj = context.active_object
@@ -534,6 +529,91 @@ class OBJECT_OT_set_auto_smooth_modal(CustomModalOperator, Operator):
         return {"RUNNING_MODAL"}
 
 
+class OBJECT_add_empty_at_objs_center(Operator):
+    bl_idname = "object.add_empty_at_objs_center"
+    bl_label = "Add Object at Objects Center"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    @classmethod
+    def poll(cls, context):
+        return len(context.selected_objects) > 0
+
+    def _add_object_and_parent(self, context, obj):
+        matrix = obj.matrix_world
+        center = utils.get_bbox_center(obj, matrix)
+        bpy.ops.object.empty_add(type='SPHERE', location=center)
+        empty = context.object
+        empty.empty_display_size = 0.25
+        utils.set_parent(obj, empty)
+
+    def execute(self, context):
+        obj = context.active_object
+        objs = context.selected_objects
+
+        if len(objs) > 1:
+            centers = []
+            for obj in objs:
+                mx = obj.matrix_world
+                center = utils.get_bbox_center(obj, mx)
+                centers.append(center)
+
+            centers = np.array(centers)
+            objs_center = np.mean(centers, axis=0)
+            bpy.ops.object.empty_add(location=objs_center)
+            empty = context.object
+
+            for obj in objs:
+                orig_mxt = obj.matrix_world.translation.copy()
+                obj.parent = empty
+                obj.matrix_world.translation = orig_mxt
+
+        else:
+            self._add_object_and_parent(context, obj)
+
+        return {"FINISHED"}
+
+
+class OBJECT_OT_quick_transforms(CustomOperator, Operator):
+    bl_idname = "object.quick_transform"
+    bl_label = "Quick Transform"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    axis: bpy.props.EnumProperty(
+        (
+            ('x', "X", "X Axis"),
+            ('y', "Y", "Y Axis"),
+            ('z', "Z", "Z Axis"),
+        ),
+        name='Axis',
+        description='Transform Axis',
+        default=None,
+    )
+    transform_type: bpy.props.EnumProperty(
+        (
+            ('Scale', "Scale", "Scale"),
+            ('Rotate', "Rotate", "Rotate"),
+        ),
+        name='Transform Type',
+        description='Type of Transform',
+        default=None,
+    )
+    transform_amt: bpy.props.FloatProperty(name="Transform Amount")
+
+    @classmethod
+    def poll(cls, context):
+        return context.active_object is not None
+
+    def execute(self, context):
+        obj = self.get_active_obj(context)
+        mx = obj.matrix_world
+        if self.transform_type == "Rotate":
+            self.transform_amt == numpy.radians(self.transform_amt)
+
+        transform_matrix = getattr(mx, self.transform_type)(self.transform_amt, 4, self.axis)
+        obj.matrix_world = transform_matrix
+        return {"FINISHED"}
+
+
 classes = (
     AddCameraCustom,
     AddLightSetup,
@@ -543,4 +623,5 @@ classes = (
     OBJECT_OT_sort_items_on_axis,
     OBJECT_OT_align_objects,
     OBJECT_OT_set_auto_smooth_modal,
+    OBJECT_add_empty_at_objs_center,
 )

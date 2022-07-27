@@ -120,4 +120,15 @@ KEYMAP_SETTINGS = [
         "space_type": "NODE_EDITOR",
         "region_type": "WINDOW",
     },
+    {
+        "keymap_operator": "wm.call_menu_pie",
+        "name": "Mesh (Global)",
+        "letter": "ONE",
+        "idname": "MESH_MT_PIE_loop_tools",
+        "shift": False,
+        "ctrl": False,
+        "alt": True,
+        "space_type": "VIEW_3D",
+        "region_type": "WINDOW",
+    },
 ]

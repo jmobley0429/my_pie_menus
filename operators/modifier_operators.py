@@ -1,15 +1,13 @@
 from collections import deque
 from statistics import mean
 
-
+import numpy as np
 import bpy
 from bpy.types import Operator
 import bmesh
-import math
-from math import pi
-from my_pie_menus.resources import utils
 from mathutils import Vector
 from .custom_operator import CustomOperator, CustomModalOperator, ModalDrawText
+from my_pie_menus.resources import utils
 
 
 class CustomAddMirrorModifier(CustomOperator, Operator):
@@ -27,19 +25,16 @@ class CustomAddMirrorModifier(CustomOperator, Operator):
     )
     bisect: bpy.props.BoolProperty(default=True)
 
+    multi_object = False
+
     def invoke(self, context, event):
         if event.alt:
             self.bisect = False
 
         return self.execute(context)
 
-    def execute(self, context):
-        in_edit_mode = bool(bpy.context.object.mode == "EDIT")
-        if in_edit_mode:
-            bpy.ops.object.mode_set(mode="OBJECT")
-
-        obj = self.get_active_obj()
-        if self.bisect:
+    def add_mirror_mod(self, obj):
+        if self.bisect and not self.multi_object:
             self._bisect_mesh()
         bpy.ops.object.modifier_add(type='MIRROR')
         axis_index = self.mirror_axis
@@ -51,15 +46,33 @@ class CustomAddMirrorModifier(CustomOperator, Operator):
         mirror_mod.use_bisect_axis[axis_index] = True
         mirror_mod.use_mirror_u = True
         mirror_mod.use_clip = True
+        if self.multi_object:
+            mirror_mod.mirror_object = self.mirror_obj
         if self.mirror_type not in {
             "Z_POS",
             "X_POS",
             "Y_POS",
         }:
             mirror_mod.use_bisect_flip_axis[axis_index] = True
+
+    def execute(self, context):
+        in_edit_mode = bool(bpy.context.object.mode == "EDIT")
+        if in_edit_mode:
+            bpy.ops.object.mode_set(mode="OBJECT")
+        if len(context.selected_objects) > 1:
+            self.multi_object = True
+            objs = set(context.selected_objects)
+            mirror_obj = set([context.active_object])
+            objs = objs - mirror_obj
+            self.mirror_obj = self.get_active_obj()
+            for obj in objs:
+                context.view_layer.objects.active = obj
+                self.add_mirror_mod(obj)
+        else:
+            obj = self.get_active_obj()
+            self.add_mirror_mod(obj)
         if in_edit_mode:
             bpy.ops.object.mode_set(mode="EDIT")
-
         return {'FINISHED'}
 
     def _bisect_mesh(self):
@@ -143,7 +156,7 @@ class BevelModifier(CustomOperator):
         obj = self.get_active_obj()
         return mean(obj.dimensions) / 65
 
-    def _add_bevel_modifier(self, harden_normals=True, profile=0.5):
+    def _add_bevel_modifier(self, harden_normals=True, profile=0.5, angle_limit=45):
         in_edit_mode = bool(bpy.context.object.mode == "EDIT")
         if in_edit_mode:
             bpy.ops.object.mode_set(mode="OBJECT")
@@ -157,6 +170,7 @@ class BevelModifier(CustomOperator):
         bevel_mod.segments = 2
         bevel_mod.width = self.relative_bwidth
         bevel_mod.profile = profile
+        bevel_mod.angle_limit = np.radians(angle_limit)
         bevel_mod.harden_normals = harden_normals
         bevel_mod.miter_outer = "MITER_ARC"
         bevel_mod.use_clamp_overlap = False
@@ -194,7 +208,6 @@ class CustomAddQuickBevSubSurfModifier(BevelModifier, Operator):
         bpy.ops.object.shade_smooth()
         obj.data.use_auto_smooth = True
         self.close_modifiers()
-
         return {"FINISHED"}
 
 
@@ -204,6 +217,11 @@ class CustomWeightedNormal(CustomOperator, Operator):
     bl_idname = "object.custom_weighted_normal"
     bl_label = "Add Custom Weighted Normal"
     bl_options = {"REGISTER", "UNDO"}
+
+    @classmethod
+    def poll(cls, context):
+        obj = context.active_object
+        return obj is not None and obj.type in {"MESH"}
 
     def execute(self, context):
         obj = self.get_active_obj()
@@ -228,7 +246,8 @@ class CustomSimpleDeform(CustomModalOperator, Operator):
 
     @classmethod
     def poll(cls, context):
-        return context.active_object is not None
+        obj = context.active_object
+        return obj is not None and obj.type in {"MESH", "CURVE"}
 
     def invoke(self, context, event):
         obj = self.get_active_obj()
@@ -247,7 +266,7 @@ class CustomSimpleDeform(CustomModalOperator, Operator):
         if event.type == 'MOUSEMOVE':
             delta = int((event.mouse_x) - self.init_x)
             self.angle = utils.clamp(delta, 0, 360)
-            self.mod.angle = math.radians(self.angle)
+            self.mod.angle = np.radians(self.angle)
         elif event.type in {"X", "Y", "Z"}:
             self.axis = event.type
             self.mod.deform_axis = self.axis
@@ -271,6 +290,11 @@ class CustomShrinkwrap(CustomOperator, Operator):
 
     bl_idname = "object.custom_shrinkwrap"
     bl_label = "Add Custom Shrinkwrap"
+
+    @classmethod
+    def poll(cls, context):
+        obj = context.active_object
+        return obj is not None and obj.type in {"MESH", "CURVE"}
 
     def execute(self, context):
         num_objs = len(bpy.context.selected_objects)
@@ -310,6 +334,11 @@ class CustomRemesh(CustomOperator, Operator):
     bl_label = "Add Custom Remesh"
     bl_options = {"REGISTER", "UNDO"}
 
+    @classmethod
+    def poll(cls, context):
+        obj = context.active_object
+        return obj is not None and obj.type in {"MESH", "CURVE"}
+
     def execute(self, context):
         bpy.ops.object.modifier_add(type="REMESH")
         mod = self._get_last_modifier()
@@ -328,6 +357,11 @@ class CustomDecimate(CustomOperator, Operator):
 
     apply_mod = False
     mode = None
+
+    @classmethod
+    def poll(cls, context):
+        obj = context.active_object
+        return obj is not None and obj.type in {"MESH", "CURVE"}
 
     def invoke(self, context, event):
         self.mode = context.mode
@@ -368,6 +402,11 @@ class ArrayModalOperator(CustomModalOperator, Operator):
     def array(self):
         obj = self.get_active_obj()
         return obj.modifiers[self.mod_name]
+
+    @classmethod
+    def poll(cls, context):
+        obj = context.active_object
+        return obj is not None and obj.type in {"MESH", "CURVE"}
 
     def _set_axis_values(self, axes: list, value, single=True):
         array_axes = ['X', 'Y', 'Z']
@@ -414,6 +453,8 @@ class ArrayModalOperator(CustomModalOperator, Operator):
                     for axis, value in self.working_axes.items():
                         self.working_axes[axis] = False
                     self.working_axes[ax] = True
+        if event.type == "MIDDLEMOUSE":
+            return {'PASS_THROUGH'}
 
         if event.type in {'WHEELUPMOUSE', 'WHEELDOWNMOUSE'}:
             self._set_array_count(event.type)
@@ -429,7 +470,7 @@ class ArrayModalOperator(CustomModalOperator, Operator):
                 multiplier = 0.01
             delta = self.initial_mouse - event.mouse_x
             if event.ctrl:
-                snap_val = math.floor(delta * (-multiplier)) + 1
+                snap_val = np.floor(delta * (-multiplier)) + 1
                 self.offset = snap_val
             else:
                 self.offset = delta * (-multiplier)
@@ -469,6 +510,11 @@ class ArrayModalOperator(CustomModalOperator, Operator):
 class SolidifyModalOperator(CustomModalOperator, Operator):
     bl_idname = "object.solidify_modal"
     bl_label = "Solidify Modal"
+
+    @classmethod
+    def poll(cls, context):
+        obj = context.active_object
+        return obj is not None and obj.type in {"MESH", "CURVE"}
 
     thickness: bpy.props.FloatProperty()
 
@@ -541,10 +587,15 @@ class ScrewModalOperator(CustomModalOperator, Operator):
     use_normal_calculate: bpy.props.BoolProperty()
     use_normal_flip: bpy.props.BoolProperty()
 
+    @classmethod
+    def poll(cls, context):
+        obj = context.active_object
+        return obj is not None and obj.type in {"MESH", "CURVE"}
+
     def set_screw_angle(self, delta, multiplier):
         angle = delta * multiplier
-        new_angle = self.modifier.angle - math.radians(angle)
-        self.modifier.angle = utils.clamp(new_angle, 0, 2 * pi)
+        new_angle = self.modifier.angle - np.radians(angle)
+        self.modifier.angle = utils.clamp(new_angle, 0, 2 * np.pi)
 
     def set_screw_count(self, event_type):
         if event_type == "WHEELUPMOUSE":
@@ -555,7 +606,7 @@ class ScrewModalOperator(CustomModalOperator, Operator):
     def _log_info_msg(self):
         mod = self.modifier
         msg = [
-            f"Degrees: {math.degrees(mod.angle)}",
+            f"Degrees: {np.degrees(mod.angle)}",
             f"Steps: {mod.steps}",
             f"Offset: {mod.screw_offset}",
             f"Iterations: {mod.iterations}",
@@ -603,7 +654,7 @@ class ScrewModalOperator(CustomModalOperator, Operator):
             self.mod_name = mod.name
             self.modifier.steps = mod.steps
             self.modifier.screw_offset = 0
-            self.modifier.angle = math.radians(360)
+            self.modifier.angle = np.radians(360)
             self.modifier.iterations = 1
             self.modifier.axis = "Z"
             self.modifier.use_object_screw_offset = False
@@ -620,32 +671,21 @@ class AddLatticeCustom(CustomOperator, Operator):
     bl_label = "Add Smart Lattice"
     bl_options = {"REGISTER", "UNDO"}
 
-    @staticmethod
-    def _get_uvw_res(coord_val):
-        cpm = coord_val
-        offset = 1
-        if cpm < 1:
-            cpm *= 100
-            cpm = math.ceil(cpm)
-        if cpm > 50:
-            cpm //= 10
-            cpm = math.ceil(cpm)
-        return max(math.floor(cpm) + offset, 2)
-
     def execute(self, context):
         obj = self.get_active_obj()
-
         if obj:
-            size = obj.dimensions
-            loc = obj.matrix_world.translation
-
-            bpy.ops.object.add(type="LATTICE", location=loc)
+            bpy.ops.object.add(type="LATTICE")
             lattice = self.get_active_obj()
-            lattice.dimensions = size
-            lattice.data.points_u = self._get_uvw_res(size.x)
-            lattice.data.points_v = self._get_uvw_res(size.y)
-            lattice.data.points_w = self._get_uvw_res(size.z)
-
+            dims = obj.dimensions
+            ldims = lattice.dimensions
+            scale_fac = Vector([d / l for l, d in zip(ldims, dims)])
+            mx = obj.matrix_world
+            center = utils.get_bbox_center(obj, mx)
+            lattice.location = center
+            lattice.scale *= scale_fac
+            lattice.data.points_u = 4
+            lattice.data.points_v = 3
+            lattice.data.points_w = 3
         else:
             bpy.ops.object.add(type="LATTICE")
 
@@ -798,9 +838,6 @@ class AddDisplaceCustom(CustomModalOperator, Operator):
         return d_textures
 
     def _init_textures(self):
-        ### delete this after testing
-
-        ###
         text_attrs = [t for t in self.textures if t]
         for name in text_attrs:
             textype = name.upper()
@@ -863,6 +900,18 @@ class AddDisplaceCustom(CustomModalOperator, Operator):
         self._init_textures()
         context.view_layer.objects.active = self.obj
         self.obj.select_set(True)
+        # create collection for displace_coord objects
+        colls = [coll.name for coll in bpy.data.collections[:]]
+        self.active_coll = context.collection
+        if "DisplaceCoords" not in colls:
+            self.dp_coll = bpy.data.collections.new('DisplaceCoords')
+            self.scene_coll = bpy.data.scenes['Scene'].collection
+            self.scene_coll.children.link(self.dp_coll)
+            self.dp_coll.hide_viewport = True
+        else:
+            self.dp_coll = bpy.data.collections['DisplaceCoords']
+        self.dp_coll.objects.link(self.empty)
+        self.active_coll.objects.unlink(self.empty)
         context.window_manager.modal_handler_add(self)
 
         return {"RUNNING_MODAL"}
@@ -1031,13 +1080,14 @@ class AddDisplaceCustom(CustomModalOperator, Operator):
 
         elif event.type == "LEFTMOUSE":
             self._clear_info(context)
+
             return {"FINISHED"}
         elif event.type in {"RIGHTMOUSE", "ESC"}:
             self._clear_info(context)
             bpy.ops.object.modifier_remove(modifier=self.mod.name)
-            self.obj.select_set(False)
-            self.empty.select_set(True)
-            bpy.ops.object.delete()
+            self.dp_coll.objects.unlink(self.empty)
+            if len(self.dp_coll.objects[:]) == 0:
+                self.scene_coll.children.unlink(self.dp_coll)
 
             return {"CANCELLED"}
         return {"RUNNING_MODAL"}
@@ -1051,6 +1101,7 @@ class ToggleClipping(Operator):
 
     @classmethod
     def poll(cls, context):
+        obj = context.active_object
         return context.active_object is not None
 
     def execute(self, context):

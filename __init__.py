@@ -26,10 +26,10 @@ if "bpy" in locals():
     importlib.reload(node_editor_operators)
     importlib.reload(sculpt_mode_operators)
     importlib.reload(uv_operators)
-
     importlib.reload(add_pies)
     importlib.reload(edit_mode_pies)
     importlib.reload(object_mode_pies)
+    importlib.reload(utils)
 
 else:
     import bpy
@@ -72,8 +72,6 @@ menu_funcs = [
 classes = [cls for module in modules for cls in module.classes]
 classes.sort(key=lambda cls: cls.bl_idname)
 
-addon_keymaps = []
-
 
 def register():
     for cls in classes:
@@ -95,7 +93,7 @@ def unregister():
 
 
 if __name__ == "__main__":
-
+    addon_keymaps = []
     register()
     for setting in KMS:
         utils.register_keymap(setting, addon_keymaps)
