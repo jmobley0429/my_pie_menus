@@ -22,7 +22,7 @@ class CustomOperator:
 
     @staticmethod
     def edit_obj_poll(context):
-        return context.mode == "EDIT_MESH" and context.active_object is not None
+        return "EDIT" in context.mode and context.active_object is not None
 
     def to_mode(self, mode):
         bpy.ops.object.mode_set(mode=mode)
@@ -137,6 +137,14 @@ class CustomBmeshOperator(CustomOperator):
         cls.mesh = bpy.data.meshes.new(mesh_name)
         cls.bm = bmesh.new()
         cls.bm.from_mesh(cls.mesh)
+
+    @staticmethod
+    def select_elem_in_list(all_elements, in_list):
+        for elem in all_elements:
+            if elem not in in_list:
+                elem.select_set(False)
+            else:
+                elem.select_set(True)
 
     @property
     def sel_edges(self):

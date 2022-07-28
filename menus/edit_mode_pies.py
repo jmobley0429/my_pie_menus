@@ -12,9 +12,9 @@ class MESH_MT_PIE_symmetrize(Menu):
         pie.operator_enum("mesh.symmetrize", "direction")
 
 
-class PIE_MT_edge_menu(Menu):
+class MESH_MT_edge_menu(Menu):
     # label is displayed at the center of the pie menu.
-    bl_idname = "PIE_MT_edge_menu"
+    bl_idname = "MESH_MT_edge_menu"
     bl_label = "Edge Menu"
 
     def draw(self, context):
@@ -75,7 +75,44 @@ class PIE_MT_edge_menu(Menu):
         col.operator("mesh.edge_rotate", text="Rotate CCW").use_ccw = True
 
 
-class VIEW3D_MT_merge_verts_pie(Menu):
+class MESH_MT_face_menu(Menu):
+    # label is displayed at the center of the pie menu.
+    bl_idname = "MESH_MT_face_menu"
+    bl_label = "Face Pie Menu"
+
+    def draw(self, context):
+        layout = self.layout
+        pie = layout.menu_pie()
+        # Left
+
+        op = pie.operator("mesh.faces_select_linked_flat")
+        op = pie.operator("mesh.beautify_fill")
+        op = pie.operator("mesh.quads_convert_to_tris")
+        box = pie.box()
+        box.scale_x *= 0.5
+        col = box.column()
+        row = col.row()
+        spl = row.split()
+        spl.operator("mesh.vert_connect_concave")
+        spl.operator("mesh.vert_connect_nonplanar")
+        row = col.row()
+        spl = row.split()
+        spl.operator("mesh.fill_holes")
+        spl.operator("mesh.face_make_planar")
+        row = col.row()
+        row.operator("mesh.quick_tris_to_quads")
+
+        col = pie.column()
+        op = col.operator("mesh.intersect")
+        op = col.operator("mesh.intersect_boolean")
+        col = pie.column()
+        op = col.operator("mesh.poke")
+        op = col.operator("mesh.poke_hole_in_faces")
+        pie.operator("mesh.solidify")
+        pie.operator("mesh.fill_grid")
+
+
+class MESH_MT_merge_verts_pie(Menu):
     bl_idname = 'VIEW3D_merge_verts_pie'
     bl_label = "Merge Verts"
 
@@ -111,7 +148,8 @@ class MESH_MT_PIE_loop_tools(Menu):
 
 classes = (
     MESH_MT_PIE_symmetrize,
-    PIE_MT_edge_menu,
-    VIEW3D_MT_merge_verts_pie,
+    MESH_MT_edge_menu,
+    MESH_MT_merge_verts_pie,
     MESH_MT_PIE_loop_tools,
+    MESH_MT_face_menu,
 )

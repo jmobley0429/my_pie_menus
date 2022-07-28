@@ -71,6 +71,7 @@ menu_funcs = [
 
 classes = [cls for module in modules for cls in module.classes]
 classes.sort(key=lambda cls: cls.bl_idname)
+addon_keymaps = []
 
 
 def register():
@@ -93,7 +94,7 @@ def unregister():
 
 
 if __name__ == "__main__":
-    addon_keymaps = []
+
     register()
     for setting in KMS:
         utils.register_keymap(setting, addon_keymaps)
