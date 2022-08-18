@@ -1,7 +1,9 @@
 import bpy
+from bpy.types import Operator
 import json
 from pathlib import Path
-from .custom_operator import CustomModalOperator
+from .custom_operator import CustomModalOperator, CustomOperator
+from my_pie_menus.resources import utils
 
 ROOT = Path(__file__).parent.parent.resolve()
 custom_shape_fp = ROOT.joinpath('resources', 'gizmo_circle_mesh.json')
@@ -65,106 +67,6 @@ class BRUSH_OT_toggle_stabilize_stroke(bpy.types.Operator):
         return {'FINISHED'}
 
 
-#
-# class BRUSH_GT_stabilize_stroke_radius(Gizmo):
-#     bl_idname = "VIEW3D_GT_ss_radius_widget"
-#     bl_target_properties = ({"id": "radius", "type": 'FLOAT', "array_length": 1},)
-#
-#     __slots__ = (
-#         "custom_shape",
-#         "init_mouse_y",
-#         "init_value",
-#     )
-#     with open(custom_shape_fp, 'r') as f:
-#         custom_shape_verts = json.load(f)
-#
-#     # def _update_offset_matrix(self):
-#     #     # offset behind the light
-#     #     self.matrix_offset.col[3][2] = self.target_get_value("offset") / -10.0
-#
-#     def draw(self, context):
-#         # self._update_offset_matrix()
-#         self.draw_custom_shape(self.custom_shape)
-#
-#     def draw_select(self, context, select_id):
-#         # self._update_offset_matrix()
-#         self.draw_custom_shape(self.custom_shape, select_id=select_id)
-#
-#     def setup(self):
-#         if not hasattr(self, "custom_shape"):
-#             self.custom_shape = self.new_custom_shape('LINES', self.custom_shape_verts)
-#
-#     def invoke(self, context, event):
-#         self.init_mouse_x = event.mouse_x
-#         self.init_value = self.target_get_value("radius")
-#         return {'RUNNING_MODAL'}
-#
-#     def exit(self, context, cancel):
-#         context.area.header_text_set(None)
-#         if cancel:
-#             self.target_set_value("radius", self.init_value)
-#
-#     def modal(self, context, event, tweak):
-#         delta = (event.mouse_x - self.init_mouse_x) / 10.0
-#         if 'SNAP' in tweak:
-#             delta = round(delta)
-#         if 'PRECISE' in tweak:
-#             delta /= 10.0
-#         value = self.init_value - delta
-#         self.target_set_value("radius", value)
-#         context.area.header_text_set("SMOOTH STROKE RADIUS: %.4f" % value)
-#         return {'RUNNING_MODAL'}
-#
-#
-# class BRUSH_GGT_stabilize_stroke_radius(GizmoGroup):
-#     bl_idname = "BRUSH_GGT_ss_radius"
-#     bl_label = "Stabilize Stroke Radius"
-#     bl_space_type = 'VIEW_3D'
-#     bl_region_type = 'WINDOW'
-#     bl_options = {'3D', 'PERSISTENT'}
-#
-#     @classmethod
-#     def poll(cls, context):
-#         op = cls.my_target_operator(context)
-#         if op is None:
-#             wm = context.window_manager
-#             wm.gizmo_group_type_unlink_delayed(BRUSH_GGT_stabilize_stroke_radius.bl_idname)
-#             return False
-#         return True
-#
-#     def move_get_cb():
-#         op = BRUSH_GGT_stabilize_stroke_radius.my_target_operator(context)
-#         return op.radius
-#
-#     def move_set_cb(value):
-#         op = BRUSH_GGT_stabilize_stroke_radius.my_target_operator(context)
-#         op.radius = value
-#         # XXX, this may change!
-#         op.execute(context)
-#
-#     @staticmethod
-#     def my_target_operator(context):
-#         wm = context.window_manager
-#         op = wm.operators[-1] if wm.operators else None
-#         if isinstance(op, BRUSH_OT_adjust_stabilize_radius):
-#             return op
-#         return None
-#
-#     def setup(self, context):
-#         # Assign the 'offset' target property to the light energy.
-#         wm = context.window_manager
-#         gz = self.gizmos.new(BRUSH_GT_stabilize_stroke_radius.bl_idname)
-#         gz.target_set_prop("radius", wm.StrokeSettings, "radius")
-#         gz.target_set_handler("offset", get=move_get_cb, set=move_set_cb)
-#         gz.color = 0.5, 0.5, 1.0
-#         gz.alpha = 0.5
-#         gz.scale_basis = 0.2
-#         gz.use_draw_modal = True
-#         self.radius_gizmo = gz
-#
-#         # def size_get(self, )
-
-
 class BRUSH_OT_adjust_stabilize_radius(CustomModalOperator, bpy.types.Operator):
 
     bl_idname = "brush.adjust_stabilize_radius"
@@ -211,7 +113,55 @@ class BRUSH_OT_adjust_stabilize_radius(CustomModalOperator, bpy.types.Operator):
         return {"RUNNING_MODAL"}
 
 
+class SCULPT_OT_change_multires_subdiv_level(CustomOperator, Operator):
+    bl_idname = "sculpt.change_multires_subdiv_level"
+    bl_label = "Change Multires Subdiv Level"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    inc_dec: bpy.props.EnumProperty(
+        items=(
+            ("INCREASE", "Increase", "Raise Subdivision Level"),
+            ("DECREASE", "Decrease", "Lower Subdivision Level"),
+        ),
+        name='Increase/Decrease',
+        description='Raise/Lower Subdivision Level',
+    )
+
+    @classmethod
+    def poll(cls, context):
+        return context.active_object is not None and "SCULPT" in context.mode
+
+    def invoke(self, context, event):
+        self.obj = context.active_object
+        self.mods = [mod for mod in self.obj.modifiers if mod.type == "MULTIRES"]
+        if not self.mods:
+            bpy.ops.object.modifier_add(type="MULTIRES")
+            self.mod = self._get_last_modifier()
+        else:
+            self.mod = self.mods[0]
+        if "SCULPT" in context.mode:
+            self.current_level = self.mod.sculpt_levels
+        else:
+            self.current_level = self.mod.levels
+        self.num_levels = self.mod.total_levels
+        return self.execute(context)
+
+    def execute(self, context):
+        addend = 1
+        if self.inc_dec == "DECREASE":
+            addend = -1
+        val = self.current_level + addend
+        new_level = utils.clamp(val, 0, 6)
+        if self.num_levels == self.current_level and self.inc_dec == "INCREASE":
+            bpy.ops.object.multires_subdivide(modifier=self.mod.name)
+        else:
+            self.mod.levels = new_level
+            self.mod.sculpt_levels = new_level
+        return {"FINISHED"}
+
+
 classes = [
     BRUSH_OT_toggle_stabilize_stroke,
     BRUSH_OT_adjust_stabilize_radius,
+    SCULPT_OT_change_multires_subdiv_level,
 ]

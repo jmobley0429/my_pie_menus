@@ -2,6 +2,7 @@ import bpy
 from bpy.types import Operator
 import bmesh
 import numpy as np
+from mathutils import Matrix, Vector
 from .custom_operator import (
     CustomOperator,
     CustomModalOperator,
@@ -251,6 +252,12 @@ class MESH_OT_weld_verts_to_active(Operator):
         return {"FINISHED"}
 
 
+class ToggleAnnotateProps(bpy.types.PropertyGroup):
+    scene_prop_id = "ToggleAnnotateProps"
+    bl_idname = "ToggleAnnotateProps"
+    prev_tool: bpy.props.StringProperty()
+
+
 class VIEW3D_OT_toggle_annotate(Operator):
     bl_idname = "view3d.toggle_annotate"
     bl_label = "Toggle Annotate"
@@ -260,14 +267,20 @@ class VIEW3D_OT_toggle_annotate(Operator):
     def poll(cls, context):
         return True
 
+    def invoke(self, context, event):
+        self.mode = context.mode
+        self.props = context.window_manager.ToggleAnnotateProps
+        self.prev_tool = self.props.prev_tool
+        return self.execute(context)
+
     def execute(self, context):
         tools = context.workspace.tools
-        mode = context.mode
-        curr_tool = tools.from_space_view3d_mode(mode, create=False).idname
-        if curr_tool != "builtin.annotate":
+        curr_tool = tools.from_space_view3d_mode(self.mode, create=False).idname
+        if self.prev_tool is None or curr_tool != "builtin.annotate":
             bpy.ops.wm.tool_set_by_id(name="builtin.annotate")
         else:
-            bpy.ops.wm.tool_set_by_id(name="builtin.select_box")
+            bpy.ops.wm.tool_set_by_id(name=self.prev_tool)
+        context.window_manager.ToggleAnnotateProps.prev_tool = curr_tool
         return {"FINISHED"}
 
 
@@ -317,6 +330,71 @@ class MESH_OT_poke_hole_in_faces(CustomBmeshOperator, CustomModalOperator, Opera
         return {"FINISHED"}
 
 
+class MESH_OT_origin_to_bottom_left(Operator):
+    bl_idname = "mesh.origin_to_bottom_left"
+    bl_label = "Origin to Bottom Left"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    @classmethod
+    def poll(cls, context):
+        return context.active_object is not None
+
+    def execute(self, context):
+        obj = bpy.context.object
+        mesh = obj.data
+        bb = obj.bound_box
+        bb_locs = np.array([v[:] for v in bb])
+        bot_left = Vector([min(row) for row in bb_locs.transpose()])
+        mat = Matrix.Translation(-bot_left)
+        if mesh.is_editmode:
+            bm = bmesh.from_edit_mesh(mesh)
+            bm.transform(mat)
+            bmesh.update_edit_mesh(me, False, False)
+        else:
+            mesh.transform(mat)
+        mesh.update()
+        obj.matrix_world.translation = bot_left
+        return {"FINISHED"}
+
+
+class MESH_OT_smart_join_verts(CustomBmeshOperator, Operator):
+    bl_idname = "mesh.smart_join_verts"
+    bl_label = "Smart Join Verts"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    @classmethod
+    def poll(cls, context):
+        return context.active_object is not None
+
+    def execute(self, context):
+        self.bmesh(context)
+        sel_verts = set([v for v in self.bm.verts[:] if v.select])
+        active_vert = set([self.bm.select_history.active])
+        one_edge = len(sel_verts) == 2
+        non_active = sel_verts - active_vert
+        if not active_vert:
+            if one_edge:
+                pass
+            else:
+                self.report({"ERROR"}, "At least one vert must be active.")
+                return {"CANCELLED"}
+        if one_edge:
+            bmesh.ops.connect_vert_pair(self.bm, verts=list(sel_verts))
+        else:
+            active = list(active_vert)[0]
+            for vert in non_active:
+                pair = [vert, active]
+                bmesh.ops.connect_vert_pair(self.bm, verts=pair)
+        bmesh.update_edit_mesh(self.mesh)
+        return {"FINISHED"}
+
+
+def origin_to_bot_left_menu_func(self, context):
+    layout = self.layout
+    pie = layout.menu_pie()
+    op = pie.operator('mesh.origin_to_bottom_left')
+
+
 classes = (
     MESH_OT_reduce_cylinder,
     MESH_OT_reduce_circle_segments,
@@ -330,4 +408,9 @@ classes = (
     MESH_OT_weld_verts_to_active,
     VIEW3D_OT_toggle_annotate,
     MESH_OT_poke_hole_in_faces,
+    MESH_OT_origin_to_bottom_left,
+    ToggleAnnotateProps,
+    MESH_OT_smart_join_verts,
 )
+
+menu_funcs = (origin_to_bot_left_menu_func,)

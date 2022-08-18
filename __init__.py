@@ -13,8 +13,6 @@ def db_block(area: str):
     print(f"{area}\n" * 3)
 
 
-db_block("**** my_pie_menus ****")
-
 if "bpy" in locals():
     import importlib
 
@@ -29,6 +27,7 @@ if "bpy" in locals():
     importlib.reload(add_pies)
     importlib.reload(edit_mode_pies)
     importlib.reload(object_mode_pies)
+    importlib.reload(sculpt_mode_pies)
     importlib.reload(utils)
 
 else:
@@ -47,6 +46,7 @@ else:
     from my_pie_menus.menus import add_pies
     from my_pie_menus.menus import edit_mode_pies
     from my_pie_menus.menus import object_mode_pies
+    from my_pie_menus.menus import sculpt_mode_pies
     from my_pie_menus.conf.keymap_settings import KEYMAP_SETTINGS as KMS
 
 
@@ -59,6 +59,7 @@ modules = [
     add_pies,
     edit_mode_pies,
     object_mode_pies,
+    sculpt_mode_pies,
     sculpt_mode_operators,
     uv_operators,
 ]
@@ -71,25 +72,33 @@ menu_funcs = [
 
 classes = [cls for module in modules for cls in module.classes]
 classes.sort(key=lambda cls: cls.bl_idname)
+
 addon_keymaps = []
 
 
 def register():
+    sculpt_mode_pies.create_icons()
     for cls in classes:
         try:
             bpy.utils.unregister_class(cls)
         except RuntimeError:
             pass
         bpy.utils.register_class(cls)
+        if type(cls) == type(bpy.types.PropertyGroup):
+            prop = bpy.props.PointerProperty(type=cls)
+            setattr(bpy.types.WindowManager, cls.scene_prop_id, prop)
+
     for menu, action, func in menu_funcs:
+        getattr(menu, "remove")(func)
         getattr(menu, action)(func)
 
 
 def unregister():
+    sculpt_mode_pies.release_icons()
     utils.unregister_keymaps(addon_keymaps)
     for cls in reversed(classes):
         bpy.utils.unregister_class(cls)
-    for menu, func in reversed(menu_funcs):
+    for menu, _, func in menu_funcs:
         getattr(menu, "remove")(func)
 
 

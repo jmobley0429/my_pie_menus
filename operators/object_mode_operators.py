@@ -118,12 +118,33 @@ class SetCustomBatchName(Operator):
         return context.window_manager.invoke_props_dialog(self)
 
     def execute(self, context):
-        objs = context.selected_objects
-        for obj in objs:
-            obj.name = self.name_string
-        for obj in objs:
-            obj.name = obj.name.replace('.0', "_")
+        active_obj = context.active_object
+        objs = list(set(context.selected_objects) - set([active_obj]))
+        objs.insert(0, active_obj)
+        for i, obj in enumerate(objs[:]):
+            if obj.name == self.name_string:
+                obj.name = "__temp__"
+        for i, obj in enumerate(objs):
+            if i == 0:
+                obj.name = self.name_string
+            else:
+                new_name = f"{self.name_string}_{str(i).zfill(2)}"
+                obj.name = new_name
         return {'FINISHED'}
+
+    def draw(self, context):
+        layout = self.layout
+
+        # Edit first editable button in popup
+        def row_with_icon(layout, icon):
+            row = layout.row()
+            row.activate_init = True
+            row.label(icon=icon)
+            return row
+
+        mode = context.mode
+        row = row_with_icon(layout, "OBJECT_DATAMODE")
+        row.prop(self, "name_string")
 
 
 class JG_SetUVChannels(Operator):
@@ -432,10 +453,13 @@ class OBJECT_OT_set_auto_smooth_modal(CustomModalOperator, Operator):
         return all([poly.use_smooth for poly in polys])
 
     def toggle_shading(self, context):
-        bpy.ops.mesh.customdata_custom_splitnormals_clear()
-        bpy.ops.object.shade_smooth()
-        self.me.use_auto_smooth = True
-        self.me.auto_smooth_angle = np.radians(self.current_angle)
+        if not self.is_smooth_shaded:
+            bpy.ops.mesh.customdata_custom_splitnormals_clear()
+            bpy.ops.object.shade_smooth()
+            self.me.use_auto_smooth = True
+            self.me.auto_smooth_angle = np.radians(self.current_angle)
+        else:
+            bpy.ops.object.shade_flat()
 
     @classmethod
     def poll(cls, context):
@@ -448,10 +472,10 @@ class OBJECT_OT_set_auto_smooth_modal(CustomModalOperator, Operator):
         else:
             ss_msg = "Flat"
         msg = [
-            f"AUTO SMOOTH ANGLE: {int(self.current_angle)}",
-            f"USE CUSTOM SPLIT NORMALS: {self.me.has_custom_normals}",
-            f"USE AUTO SMOOTH: {self.is_auto_smoothed}",
-            f"SHADE MODE: {ss_msg}",
+            f"AUTO SMOOTH ANGLE (Wheel): {int(self.current_angle)}",
+            f"USE CUSTOM SPLIT NORMALS (N): {self.me.has_custom_normals}",
+            f"USE AUTO SMOOTH (TAB): {self.is_auto_smoothed}",
+            f"SHADE MODE (S): {ss_msg}",
         ]
 
         return ', '.join(msg)
@@ -657,6 +681,45 @@ class OBJECT_OT_quick_transforms(CustomOperator, Operator):
         return {"FINISHED"}
 
 
+class OBJECT_OT_RemoveDoubledObjects(Operator):
+    bl_idname = "object.remove_doubled_objects"
+    bl_label = "Remove Doubled Objects"
+    desc_lines = [
+        "Loop over selected objects and delete objects",
+        "that share the same location and name w/o suffix.",
+    ]
+    bl_description = "\n".join(desc_lines)
+    bl_options = {'REGISTER', 'UNDO'}
+
+    @classmethod
+    def poll(cls, context):
+        return len(context.selected_objects) > 1
+
+    def execute(self, context):
+        ids = []
+        dupe_objs = []
+        objs = [obj for obj in context.selected_objects[:] if obj.type == "MESH"]
+        num_del_objs = 0
+        for obj in bpy.context.selected_objects[:]:
+            obj.select_set(False)
+
+        for obj in objs:
+            loc = obj.location
+            name = re.split('\.|(_)\d{2}', obj.name)[0]
+            if (loc, name) in ids:
+                index = ids.index((loc, name))
+                dupe = dupe_objs[index]
+                if len(dupe.data.vertices[:]) == len(obj.data.vertices[:]):
+                    obj.select_set(True)
+                    num_del_objs += 1
+                    bpy.ops.object.delete()
+            else:
+                ids.append((loc, name))
+                dupe_objs.append(obj)
+        self.report({"INFO"}, f"Finished. {num_del_objs} deleted.")
+        return {"FINISHED"}
+
+
 classes = (
     AddCameraCustom,
     AddLightSetup,
@@ -668,4 +731,5 @@ classes = (
     OBJECT_OT_set_auto_smooth_modal,
     OBJECT_add_empty_at_objs_center,
     OBJECT_OT_quick_transforms,
+    OBJECT_OT_RemoveDoubledObjects,
 )

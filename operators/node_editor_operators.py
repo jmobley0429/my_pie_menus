@@ -1,10 +1,24 @@
 import bpy
+import numpy as np
+from mathutils import Vector
 
 
-class NODE_OT_node_align_right(bpy.types.Operator):
-    bl_idname = "node.align_right"
-    bl_label = "Align nodes to right"
+class NODE_OT_node_align(bpy.types.Operator):
+    bl_idname = "node.align"
+    bl_label = "Align Nodes"
     bl_options = {'REGISTER', 'UNDO'}
+
+    direction: bpy.props.EnumProperty(
+        items=(
+            ("TOP", "Top", "Top"),
+            ("BOTTOM", "Bottom", "Bottom"),
+            ("LEFT", "Left", "Left"),
+            ("RIGHT", "Right", "Right"),
+        ),
+        name='Direction',
+        description='Direction to align on.',
+        default=None,
+    )
 
     @classmethod
     def poll(cls, context):
@@ -12,67 +26,81 @@ class NODE_OT_node_align_right(bpy.types.Operator):
 
     def execute(self, context):
         sel_nodes = context.selected_nodes
-        right_loc = max([node.location.x for node in sel_nodes])
+        min_max_func = max
+        axis = "x"
+        if self.direction in {"LEFT", "BOTTOM"}:
+            min_max_func = min
+        if self.direction in {"TOP", "BOTTOM"}:
+            axis = "y"
+
+        loc = min_max_func([getattr(node.location, axis) for node in sel_nodes])
         for node in sel_nodes:
-            node.location.x = right_loc
+            setattr(node.location, axis, loc)
         return {'FINISHED'}
 
 
-class NODE_OT_node_align_left(bpy.types.Operator):
-    bl_idname = "node.align_left"
-    bl_label = "Align nodes to left"
+class NODE_OT_node_average_distance(bpy.types.Operator):
+    bl_idname = "node.average_distance"
+    bl_label = "Average Node Distance"
     bl_options = {'REGISTER', 'UNDO'}
+
+    spacing_mult = 1.2
+
+    @property
+    def _num_nodes(self):
+        return len(self.nodes)
+
+    @property
+    def _avg_node_dim(self):
+        real_avg = np.mean(self.dims)
+        return np.mean([real_avg * 1.1, max(self.dims)])
+
+    @property
+    def _avg_node_loc(self):
+        return Vector((np.mean(self.x_locs), np.mean(self.y_locs)))
+
+    @property
+    def _space_between(self):
+        return self._avg_node_dim * self.spacing_mult
+
+    def _set_start_point(self):
+        total_length = (self._avg_node_dim * self.spacing_mult) * (self._num_nodes + 1)
+        self.start = self._avg_node_loc.x - total_length / 2
+        self.end = self._avg_node_loc.x + total_length / 2
+
+    def _set_new_locs(self):
+        mult = 1
+        current_loc = self._avg_node_loc
+        y_avg = self._avg_node_loc.y
+        range_locs = np.arange(self.start + self._avg_node_dim, self.end, self._space_between)
+
+        print("Range_locs: ", range_locs)
+        locs = [Vector((loc, y_avg)) for loc in range_locs]
+        i = 0
+        for node, loc in zip(self.nodes, locs):
+
+            node.location = loc
 
     @classmethod
     def poll(cls, context):
         return context.area.type == "NODE_EDITOR"
 
-    def execute(self, context):
-        sel_nodes = context.selected_nodes
-        right_loc = min([node.location.x for node in sel_nodes])
-        for node in sel_nodes:
-            node.location.x = right_loc
-        return {'FINISHED'}
+    def invoke(self, context, event):
+        self.nodes = sorted(context.selected_nodes, key=lambda node: node.location.x)
 
-
-class NODE_OT_node_align_top(bpy.types.Operator):
-    bl_idname = "node.align_top"
-    bl_label = "Align nodes to top"
-    bl_options = {'REGISTER', 'UNDO'}
-
-    @classmethod
-    def poll(cls, context):
-        return context.area.type == "NODE_EDITOR"
+        self.dims = np.array([node.dimensions.x for node in self.nodes])
+        self.locs = np.array([node.location for node in self.nodes])
+        self.x_locs, self.y_locs = zip(*self.locs)
+        self._set_start_point()
+        return self.execute(context)
 
     def execute(self, context):
-        sel_nodes = context.selected_nodes
-        right_loc = max([node.location.y for node in sel_nodes])
-        for node in sel_nodes:
-            node.location.y = right_loc
-        return {'FINISHED'}
-
-
-class NODE_OT_node_align_bottom(bpy.types.Operator):
-    bl_idname = "node.align_bottom"
-    bl_label = "Align nodes to bottom"
-    bl_options = {'REGISTER', 'UNDO'}
-
-    @classmethod
-    def poll(cls, context):
-        return context.area.type == "NODE_EDITOR"
-
-    def execute(self, context):
-        sel_nodes = context.selected_nodes
-        right_loc = min([node.location.y for node in sel_nodes])
-        for node in sel_nodes:
-            node.location.y = right_loc
+        self._set_new_locs()
         return {'FINISHED'}
 
 
 # Register and add to the "object" menu (required to also use F3 search "Simple Object Operator" for quick access).
 classes = [
-    NODE_OT_node_align_right,
-    NODE_OT_node_align_left,
-    NODE_OT_node_align_top,
-    NODE_OT_node_align_bottom,
+    NODE_OT_node_align,
+    NODE_OT_node_average_distance,
 ]

@@ -1,10 +1,12 @@
 import bpy
 from bpy.types import Menu
+import numpy as np
 
 
 class MESH_MT_PIE_symmetrize(Menu):
     bl_label = "Select Mode"
     bl_idname = "MESH_MT_PIE_symmetrize"
+    bl_options = {"REGISTER", "UNDO"}
 
     def draw(self, context):
         layout = self.layout
@@ -16,6 +18,7 @@ class MESH_MT_edge_menu(Menu):
     # label is displayed at the center of the pie menu.
     bl_idname = "MESH_MT_edge_menu"
     bl_label = "Edge Menu"
+    bl_options = {"REGISTER", "UNDO"}
 
     def draw(self, context):
         layout = self.layout
@@ -58,7 +61,7 @@ class MESH_MT_edge_menu(Menu):
         #
         col = pie.split().column()
         col.operator("mesh.increase_cylinder_res")
-        col.operator("mesh.subdivide")
+        col.operator("mesh.reduce_circle_segments")
         #
         # Right
         col = pie.split().column()
@@ -79,6 +82,7 @@ class MESH_MT_face_menu(Menu):
     # label is displayed at the center of the pie menu.
     bl_idname = "MESH_MT_face_menu"
     bl_label = "Face Pie Menu"
+    bl_options = {"REGISTER", "UNDO"}
 
     def draw(self, context):
         layout = self.layout
@@ -86,6 +90,7 @@ class MESH_MT_face_menu(Menu):
         # Left
 
         op = pie.operator("mesh.faces_select_linked_flat")
+        op.sharpness = np.radians(25)
         op = pie.operator("mesh.beautify_fill")
         op = pie.operator("mesh.quads_convert_to_tris")
         box = pie.box()
@@ -115,6 +120,7 @@ class MESH_MT_face_menu(Menu):
 class MESH_MT_merge_verts_pie(Menu):
     bl_idname = 'VIEW3D_merge_verts_pie'
     bl_label = "Merge Verts"
+    bl_options = {"REGISTER", "UNDO"}
 
     def draw(self, _context):
         layout = self.layout
@@ -132,6 +138,7 @@ class MESH_MT_merge_verts_pie(Menu):
 class MESH_MT_PIE_loop_tools(Menu):
     bl_label = "Loop Tools"
     bl_idname = "MESH_MT_PIE_loop_tools"
+    bl_options = {"REGISTER", "UNDO"}
 
     def draw(self, context):
         layout = self.layout
@@ -146,10 +153,43 @@ class MESH_MT_PIE_loop_tools(Menu):
         op = pie.operator("mesh.looptools_space")
 
 
+class MESH_MT_PIE_select_by_trait(Menu):
+    bl_label = "Select by Trait"
+    bl_idname = "MESH_MT_PIE_select_by_trait"
+    bl_options = {"REGISTER", "UNDO"}
+
+    def draw(self, context):
+        layout = self.layout
+        pie = layout.menu_pie()
+        pie.operator("mesh.select_face_by_sides")
+        pie.operator("mesh.select_interior_faces")
+        pie.operator("mesh.select_loose")
+        pie.operator("mesh.select_non_manifold")
+
+
+class MESH_MT_PIE_cleanup(Menu):
+    bl_label = "Clean Up Pie"
+    bl_idname = "MESH_MT_PIE_cleanup"
+    bl_options = {"REGISTER", "UNDO"}
+
+    def draw(self, context):
+        layout = self.layout
+        pie = layout.menu_pie()
+        op = pie.operator("mesh.delete_loose")
+        op = pie.operator("mesh.decimate")
+        op.ratio = 0.1
+        op = pie.operator("mesh.dissolve_degenerate")
+        op = pie.operator("mesh.face_make_planar")
+        op = pie.operator("mesh.vert_connect_nonplanar")
+        op = pie.operator("mesh.vert_connect_concave")
+
+
 classes = (
     MESH_MT_PIE_symmetrize,
     MESH_MT_edge_menu,
     MESH_MT_merge_verts_pie,
     MESH_MT_PIE_loop_tools,
     MESH_MT_face_menu,
+    MESH_MT_PIE_select_by_trait,
+    MESH_MT_PIE_cleanup,
 )

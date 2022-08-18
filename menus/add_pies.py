@@ -12,8 +12,6 @@ class PIE_MT_AddMesh(Menu):
         pie = layout.menu_pie()
         box = pie.split().column()
         # Left -- Cube
-        box.label(text="Cube")
-
         spl = box.split()
         op = spl.operator("mesh.custom_cube_add", text="1m", icon="MESH_CUBE")
         op.size = 1
@@ -31,20 +29,33 @@ class PIE_MT_AddMesh(Menu):
         op.size = 2
 
         # Right -- Sphere
-        box = pie.split().column()
-        op = box.operator("mesh.primitive_uv_sphere_add", text="UV Sphere", icon="MESH_UVSPHERE")
+        col = pie.column()
+        spl = col.split()
+        op = spl.operator("mesh.primitive_uv_sphere_add", text="UV - 32", icon="MESH_UVSPHERE")
         op.segments = 32
         op.ring_count = 16
         op.radius = 1
-        op = box.operator("mesh.primitive_ico_sphere_add", text="IcoSphere", icon="MESH_ICOSPHERE")
-        op = box.operator("mesh.primitive_round_cube_add", text="QuadSphere", icon="MESH_UVSPHERE")
+        op = spl.operator("mesh.primitive_uv_sphere_add", text="UV - 16", icon="MESH_UVSPHERE")
+        op.segments = 16
+        op.ring_count = 8
+        op.radius = 1
+        spl = col.split()
+        op = spl.operator("mesh.primitive_ico_sphere_add", text="Ico - 2", icon="MESH_ICOSPHERE")
+        op.subdivisions = 2
+        op = spl.operator("mesh.primitive_ico_sphere_add", text="Ico - 1", icon="MESH_ICOSPHERE")
+        op.subdivisions = 2
+        spl = col.split()
+        op = spl.operator("mesh.primitive_round_cube_add", text="Quad - 8", icon="MESH_UVSPHERE")
         op.arc_div = 8
+        op.radius = 1
+        op.div_type = "CORNERS"
+        op = spl.operator("mesh.primitive_round_cube_add", text="Quad - 4", icon="MESH_UVSPHERE")
+        op.arc_div = 4
         op.radius = 1
         op.div_type = "CORNERS"
 
         # bottom -- Circle
         box = pie.split().column()
-        box.label(text="Circle")
         spl = box.split()
         op = spl.operator("mesh.primitive_circle_add", text="6", icon="MESH_CIRCLE")
         op.vertices = 6
@@ -76,7 +87,7 @@ class PIE_MT_AddMesh(Menu):
 
         # Top -- Cylinder
         box = pie.split().column()
-        box.label(text="Cylinder")
+        box.ui_units_y -= 25
         spl = box.split()
         op = spl.operator("mesh.custom_cylinder_add", text="6", icon="MESH_CYLINDER")
         op.vertices = 6
@@ -98,21 +109,58 @@ class PIE_MT_AddMesh(Menu):
         op = spl.operator("mesh.custom_cylinder_add", text="64", icon="MESH_CYLINDER")
         op.vertices = 64
 
-        # Curves
         box = pie.split().column()
-
-        op = box.operator("curve.primitive_bezier_curve_add", text="Bezier Curve", icon="IPO_BEZIER")
-
-        op = box.operator("curve.primitive_nurbs_path_add", text="Path", icon="CURVE_PATH")
-
-        op = box.operator("curve.primitive_bezier_circle_add", text="Curve Circle", icon="CURVE_NCIRCLE")
+        spl = box.split()
+        op = spl.operator("mesh.primitive_plane_add", text="Plane 1m", icon="MESH_PLANE")
+        op.size = 1
+        op = spl.operator("mesh.primitive_plane_add", text="Plane .5m", icon="MESH_PLANE")
+        op.size = 0.5
+        spl = box.split()
+        op = spl.operator("mesh.primitive_grid_add", text="Grid 25", icon="MESH_GRID")
+        op.x_subdivisions = 25
+        op.y_subdivisions = 25
+        op = spl.operator("mesh.primitive_grid_add", text="Grid 10", icon="MESH_GRID")
+        spl = box.split()
+        op = spl.operator("mesh.primitive_round_cube_add", text="3D Grid", icon="GRID")
+        op.radius = 0.0
+        op.lin_div = 5
+        op.div_type = "ALL"
+        op = spl.operator("mesh.primitive_vert_add", text="Single Vert", icon="DECORATE")
 
         # Planes
+        # empty / other
         box = pie.split().column()
-
-        op = box.operator("mesh.primitive_plane_add", text="Plane", icon="MESH_PLANE")
-        op = box.operator("mesh.primitive_grid_add", text="Grid", icon="MESH_GRID")
-        op = box.operator("mesh.primitive_vert_add", text="Single Vert", icon="DECORATE")
+        box.ui_units_y -= 5
+        box.ui_units_x -= 5
+        spl = box.split()
+        op = spl.operator("object.empty_add", text="Plain Axes", icon="EMPTY_AXIS")
+        op.type = "PLAIN_AXES"
+        op = spl.operator("object.empty_add", text="Arrows", icon="EMPTY_ARROWS")
+        op.type = "ARROWS"
+        spl = box.split()
+        op = spl.operator("object.empty_add", text="Cube", icon="CUBE")
+        op.type = "CUBE"
+        op = spl.operator("object.empty_add", text="Circle", icon="MESH_CIRCLE")
+        op.type = "CIRCLE"
+        spl = box.split()
+        op = spl.operator("object.empty_add", text="Sphere", icon="CUBE")
+        op.type = "SPHERE"
+        has_collections = len(bpy.data.collections) > 0
+        if has_collections or len(bpy.data.collections) > 10:
+            col = box
+            spl.operator_context = "INVOKE_REGION_WIN"
+            spl.operator(
+                "object.collection_instance_add",
+                text="Collection" if has_collections else "No Collections",
+                icon="OUTLINER_OB_GROUP_INSTANCE",
+            )
+        else:
+            spl.operator_menu_enum(
+                "object.collection_instance_add",
+                "collection",
+                text="Collection Instance",
+                icon="OUTLINER_OB_GROUP_INSTANCE",
+            )
 
         # Random
         box = pie.split().column()
@@ -121,33 +169,17 @@ class PIE_MT_AddMesh(Menu):
         op = box.operator("mesh.primitive_cone_add", text="Cone", icon="MESH_CONE")
         op = box.operator("mesh.primitive_monkey_add", text="Monkey", icon="MESH_MONKEY")
 
-        # empty / other
+        # Curves
         box = pie.split().column()
-        op = box.operator("object.empty_add", text="Plain Axes", icon="EMPTY_AXIS")
-        op.type = "PLAIN_AXES"
-        op = box.operator("object.empty_add", text="Empty Sphere", icon="SPHERE")
-        op.type = "SPHERE"
-        has_collections = len(bpy.data.collections) > 0
-        if has_collections or len(bpy.data.collections) > 10:
-            col = box
-            col.operator_context = "INVOKE_REGION_WIN"
-            col.operator(
-                "object.collection_instance_add",
-                text="Collection" if has_collections else "No Collections",
-                icon="OUTLINER_OB_GROUP_INSTANCE",
-            )
-        else:
-            col.operator_menu_enum(
-                "object.collection_instance_add",
-                "collection",
-                text="Collection Instance",
-                icon="OUTLINER_OB_GROUP_INSTANCE",
-            )
+        box.ui_units_y += 2
+        op = box.operator("curve.primitive_bezier_curve_add", text="Bezier Curve", icon="IPO_BEZIER")
+        op = box.operator("curve.primitive_nurbs_path_add", text="Path", icon="CURVE_PATH")
+        op = box.operator("curve.primitive_bezier_circle_add", text="Curve Circle", icon="CURVE_NCIRCLE")
 
 
-class PIE_MT_ParticleSubPie(Menu):
-    bl_idname = "PIE_MT_ParticleSubPie"
-    bl_label = "Pie Add Particle Modifiers"
+class PIE_MT_PhysicsSubPie(Menu):
+    bl_idname = "PIE_MT_PhysicsSubPie"
+    bl_label = "Pie Add Physics Modifiers"
     bl_options = {"REGISTER", "UNDO"}
 
     @classmethod
@@ -159,6 +191,8 @@ class PIE_MT_ParticleSubPie(Menu):
         layout = self.layout
         op = layout.operator("object.modifier_add", text="Cloth", icon="MOD_CLOTH")
         op.type = "CLOTH"
+        op = layout.operator("object.modifier_add", text="Collision", icon="MOD_PHYSICS")
+        op.type = "COLLISION"
         op = layout.operator("object.modifier_add", text="Particle", icon="PARTICLES")
         op.type = "PARTICLE_SYSTEM"
         op = layout.operator("object.modifier_add", text="Soft Body", icon="MOD_SOFT")
@@ -178,6 +212,8 @@ class PIE_MT_MeshSubPie(Menu):
 
     def draw(self, context):
         layout = self.layout
+        op = layout.operator("object.modifier_add", text="Multires", icon="MOD_MULTIRES")
+        op.type = "MULTIRES"
         layout.operator("object.custom_remesh", text="Remesh", icon="MOD_REMESH")
         layout.operator("object.custom_decimate", text="Decimate", icon="MOD_DECIM")
         op = layout.operator("object.modifier_add", text="Smooth", icon="MOD_SMOOTH")
@@ -260,7 +296,7 @@ class PIE_MT_AddModifier(Menu):
         box.operator("object.solidify_modal", text="Solidify", icon="MOD_SOLIDIFY")
         box.operator("object.screw_modal", text="Screw", icon="MOD_SCREW")
         # TL --
-        op = pie.menu('PIE_MT_ParticleSubPie', text="Physics", icon='PHYSICS')
+        op = pie.menu('PIE_MT_PhysicsSubPie', text="Physics", icon='PHYSICS')
         # TR --
         op = pie.menu("PIE_MT_MeshSubPie", text="Mesh", icon='MOD_REMESH')
         # BL --
@@ -311,14 +347,14 @@ class PIE_MT_AddOtherObjects(Menu):
         # Mannequin
         pie.operator("mesh.primitive_mannequin_add", text="Mannequin", icon="OUTLINER_OB_ARMATURE")
         # Armature
-        pie.operator("object.armature_add", text="Armature", icon="ARMATURE_DATA")
+        pie.menu("TOPBAR_MT_edit_armature_add", text="Armature", icon="ARMATURE_DATA")
         # Metaball
         pie.menu("VIEW3D_MT_metaball_add", text="Metaball", icon="META_DATA")
 
 
 classes = (
     PIE_MT_AddMesh,
-    PIE_MT_ParticleSubPie,
+    PIE_MT_PhysicsSubPie,
     PIE_MT_MeshSubPie,
     PIE_MT_NormalSubPie,
     PIE_MT_AddModifier,

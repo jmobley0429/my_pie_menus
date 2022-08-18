@@ -24,36 +24,41 @@ class CustomAddMirrorModifier(CustomOperator, Operator):
         default="",
     )
     bisect: bpy.props.BoolProperty(default=True)
+    bisect_only: bpy.props.BoolProperty(default=False)
 
     multi_object = False
 
     def invoke(self, context, event):
+        self.bisect_only = False
         if event.alt:
             self.bisect = False
+        if event.ctrl:
+            self.bisect_only = True
 
         return self.execute(context)
 
     def add_mirror_mod(self, obj):
         if self.bisect and not self.multi_object:
             self._bisect_mesh()
-        bpy.ops.object.modifier_add(type='MIRROR')
-        axis_index = self.mirror_axis
-        mirror_mod = obj.modifiers[:][-1]
-        for i in range(3):
-            mirror_mod.use_axis[i] = False
-            mirror_mod.use_bisect_axis[i] = False
-        mirror_mod.use_axis[axis_index] = True
-        mirror_mod.use_bisect_axis[axis_index] = True
-        mirror_mod.use_mirror_u = True
-        mirror_mod.use_clip = True
-        if self.multi_object:
-            mirror_mod.mirror_object = self.mirror_obj
-        if self.mirror_type not in {
-            "Z_POS",
-            "X_POS",
-            "Y_POS",
-        }:
-            mirror_mod.use_bisect_flip_axis[axis_index] = True
+        if not self.bisect_only:
+            bpy.ops.object.modifier_add(type='MIRROR')
+            axis_index = self.mirror_axis
+            mirror_mod = obj.modifiers[:][-1]
+            for i in range(3):
+                mirror_mod.use_axis[i] = False
+                mirror_mod.use_bisect_axis[i] = False
+            mirror_mod.use_axis[axis_index] = True
+            mirror_mod.use_bisect_axis[axis_index] = True
+            mirror_mod.use_mirror_u = True
+            mirror_mod.use_clip = True
+            if self.multi_object:
+                mirror_mod.mirror_object = self.mirror_obj
+            if self.mirror_type not in {
+                "Z_POS",
+                "X_POS",
+                "Y_POS",
+            }:
+                mirror_mod.use_bisect_flip_axis[axis_index] = True
 
     def execute(self, context):
         in_edit_mode = bool(bpy.context.object.mode == "EDIT")
@@ -151,6 +156,31 @@ class CustomAddMirrorModifier(CustomOperator, Operator):
 
 
 class BevelModifier(CustomOperator):
+
+    bl_options = {'REGISTER', "UNDO"}
+
+    limit_method: bpy.props.EnumProperty(
+        items=(
+            ('WEIGHT', "Weight", "Weight"),
+            ('ANGLE', "Angle", "Weight"),
+        ),
+        name='Weight',
+        description='Weighted Limit Method',
+        default="ANGLE",
+    )
+
+    def _next_limit_method(self, event):
+        methods = [
+            'WEIGHT',
+            'ANGLE',
+        ]
+        addend = 1
+        if event.shift:
+            addend = -1
+        curr_index = methods.index(self.limit_method)
+        new_index = (curr_index + addend) % len(methods)
+        return methods[new_index]
+
     @property
     def relative_bwidth(self):
         obj = self.get_active_obj()
@@ -160,13 +190,12 @@ class BevelModifier(CustomOperator):
         in_edit_mode = bool(bpy.context.object.mode == "EDIT")
         if in_edit_mode:
             bpy.ops.object.mode_set(mode="OBJECT")
-
         obj = self.get_active_obj()
-
         bpy.ops.object.shade_smooth()
         obj.data.use_auto_smooth = True
         bpy.ops.object.modifier_add(type='BEVEL')
         bevel_mod = obj.modifiers[:][-1]
+        bevel_mod.limit_method = self.limit_method
         bevel_mod.segments = 2
         bevel_mod.width = self.relative_bwidth
         bevel_mod.profile = profile
@@ -174,22 +203,71 @@ class BevelModifier(CustomOperator):
         bevel_mod.harden_normals = harden_normals
         bevel_mod.miter_outer = "MITER_ARC"
         bevel_mod.use_clamp_overlap = False
+        self.bevel_mod = bevel_mod
         if in_edit_mode:
             bpy.ops.object.mode_set(mode="EDIT")
 
 
-class CustomAddBevelModifier(BevelModifier, Operator):
+class CustomAddBevelModifier(BevelModifier, CustomModalOperator, Operator):
     """Add Custom Bevel Modifier"""
 
     bl_idname = "object.custom_bevel_modifier"
     bl_label = "Add Custom Bevel"
     bl_parent_id = "CustomOperator"
     bl_options = {"REGISTER", "UNDO"}
+    bl_description = "Add Bevel modifier, Angle is default limit method, Hold ALT for Weighted."
 
-    def execute(self, context):
+    @property
+    def modal_info_string(self):
+        lines = [
+            f"BEVEL WIDTH: {self.bevel_mod.width:.3f}",
+            f"SEGMENTS (MouseWheel): {self.bevel_mod.segments}",
+            f"LIMIT METHOD (Tab): {self.limit_method}",
+            f"CLAMP OVERLAP (C): {self.bevel_mod.use_clamp_overlap}",
+            f"HARDEN NORMALS (H): {self.bevel_mod.harden_normals}",
+        ]
+        return ", ".join(lines)
+
+    def invoke(self, context, event):
+        if event.alt:
+            self.limit_method = "WEIGHT"
         self._add_bevel_modifier()
-        self.close_modifiers()
-        return {"FINISHED"}
+        self.init_mouse_x = event.mouse_x
+        self.bwidth = self.relative_bwidth
+        context.window_manager.modal_handler_add(self)
+        return {"RUNNING_MODAL"}
+
+    def modal(self, context, event):
+
+        self.display_modal_info(self.modal_info_string, context)
+        self.multiplier = 0.001
+        if event.shift:
+            self.multiplier = 0.0001
+        if event.type == "MOUSEMOVE":
+
+            delta = (self.init_mouse_x - event.mouse_x) * self.multiplier
+            self.bevel_mod.width -= delta
+            self.init_mouse_x = event.mouse_x
+        elif event.type == "WHEELUPMOUSE":
+            self.bevel_mod.segments += 1
+        elif event.type == "WHEELDOWNMOUSE":
+            self.bevel_mod.segments -= 1
+        elif event.value == "PRESS":
+            if event.type == "TAB":
+                new_lm = self._next_limit_method(event)
+                self.bevel_mod.limit_method = new_lm
+            elif event.type == "C":
+                col = self.bevel_mod.use_clamp_overlap
+                self.bevel_mod.use_clamp_overlap = not col
+            elif event.type == "H":
+                hn = self.bevel_mod.harden_normals
+                self.bevel_mod.harden_normals = not hn
+        elif event.type in {"ESC", "RIGHTMOUSE"}:
+            bpy.ops.object.modifier_remove(modifier=self.bevel_mod.name)
+            return self.exit_modal(context, cancelled=True)
+        elif event.type == "LEFTMOUSE":
+            return self.exit_modal(context)
+        return {"RUNNING_MODAL"}
 
 
 class CustomAddQuickBevSubSurfModifier(BevelModifier, Operator):
@@ -202,12 +280,17 @@ class CustomAddQuickBevSubSurfModifier(BevelModifier, Operator):
 
     def execute(self, context):
         obj = self.get_active_obj()
+        in_edit = "EDIT" in context.mode
+        if in_edit:
+            bpy.ops.object.mode_set(mode="OBJECT")
         self._add_bevel_modifier(harden_normals=False, profile=1)
         bpy.ops.object.modifier_add(type='SUBSURF')
         bpy.ops.object.modifier_add(type='WEIGHTED_NORMAL')
         bpy.ops.object.shade_smooth()
         obj.data.use_auto_smooth = True
         self.close_modifiers()
+        if in_edit:
+            bpy.ops.object.mode_set(mode="EDIT")
         return {"FINISHED"}
 
 
@@ -306,7 +389,8 @@ class CustomShrinkwrap(CustomOperator, Operator):
         bpy.ops.object.modifier_add(type="SHRINKWRAP")
         sw = self._get_last_modifier()
         sw.target = target
-        sw.offset = 0.01
+        sw.wrap_mode = "ABOVE_SURFACE"
+        sw.offset = 0.0001
 
         return {"FINISHED"}
 
@@ -485,6 +569,7 @@ class ArrayModalOperator(CustomModalOperator, Operator):
 
         elif event.type in {'RIGHTMOUSE', 'ESC'}:
             self._clear_info(context)
+            bpy.ops.object.modifier_remove(modifier=self.modifier.name)
             return {'CANCELLED'}
 
         return {'RUNNING_MODAL'}

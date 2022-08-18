@@ -90,11 +90,11 @@ class CustomCubeAdd(CustomBmeshOperator, bpy.types.Operator, AddObjectHelper):
         default=1.0,
     )
 
-    center_origin = False
+    center_origin = True
 
     def invoke(self, context, event):
         if event.alt:
-            self.center_origin = True
+            self.center_origin = False
         return self.execute(context)
 
     def execute(self, context):
@@ -133,11 +133,11 @@ class CustomCylinderAdd(CustomBmeshOperator, bpy.types.Operator, AddObjectHelper
         default=16,
     )
 
-    center_origin = False
+    center_origin = True
 
     def invoke(self, context, event):
         if event.alt:
-            self.center_origin = True
+            self.center_origin = False
         return self.execute(context)
 
     def execute(self, context):
