@@ -68,6 +68,7 @@ menu_funcs = [
     (bpy.types.IMAGE_MT_uvs_snap_pie, "append", uv_operators.origin_menu_func),
     (bpy.types.IMAGE_MT_uvs_snap_pie, "append", uv_operators.midpoint_menu_func),
     (bpy.types.DATA_PT_modifiers, "prepend", modifier_operators.menu_func),
+    (bpy.types.VIEW3D_MT_select_object, "append", object_mode_operators.deselect_parented_objs_menu_func),
 ]
 
 classes = [cls for module in modules for cls in module.classes]

@@ -222,6 +222,18 @@ class PIE_MT_MeshSubPie(Menu):
         op.type = "WIREFRAME"
 
 
+class PIE_MT_add_armature_extended(Menu):
+    bl_idname = "PIE_MT_add_armature_extended"
+    bl_label = "Pie Add Armature Extended"
+    bl_options = {"REGISTER", "UNDO"}
+
+    def draw(self, context):
+        layout = self.layout
+        layout.operator("object.armature_add", text="Single Bone", icon="BONE_DATA")
+        layout.menu('ARMATURE_MT_Basic_class')
+        layout.menu('ARMATURE_MT_Animals_class')
+
+
 class PIE_MT_NormalSubPie(Menu):
     bl_idname = "PIE_MT_NormalSubPie"
     bl_label = "Pie Add Normal Modifiers"
@@ -347,7 +359,7 @@ class PIE_MT_AddOtherObjects(Menu):
         # Mannequin
         pie.operator("mesh.primitive_mannequin_add", text="Mannequin", icon="OUTLINER_OB_ARMATURE")
         # Armature
-        pie.menu("TOPBAR_MT_edit_armature_add", text="Armature", icon="ARMATURE_DATA")
+        pie.menu("PIE_MT_add_armature_extended", text="Armature", icon="ARMATURE_DATA")
         # Metaball
         pie.menu("VIEW3D_MT_metaball_add", text="Metaball", icon="META_DATA")
 
@@ -359,4 +371,5 @@ classes = (
     PIE_MT_NormalSubPie,
     PIE_MT_AddModifier,
     PIE_MT_AddOtherObjects,
+    PIE_MT_add_armature_extended,
 )

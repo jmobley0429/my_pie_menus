@@ -8,7 +8,11 @@ from collections import defaultdict
 from pathlib import Path
 from bpy.types import Operator
 
-from .custom_operator import CustomOperator, CustomModalOperator
+from .custom_operator import (
+    CustomOperator,
+    CustomModalOperator,
+    CustomBmeshOperator,
+)
 from my_pie_menus.resources import utils
 
 
@@ -720,6 +724,54 @@ class OBJECT_OT_RemoveDoubledObjects(Operator):
         return {"FINISHED"}
 
 
+class OBJECT_OT_deselect_parented_objs(CustomOperator, Operator):
+    bl_idname = "object.deselect_parented_objs"
+    bl_label = "Deselect Parented Objs"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    def execute(self, context):
+        objs = context.selected_objects
+        for obj in objs[:]:
+            if obj.parent:
+                obj.select_set(False)
+        return {"FINISHED"}
+
+
+class OBJECT_OT_quick_cloth_pin(CustomBmeshOperator, Operator):
+    bl_idname = "object.quick_cloth_pin"
+    bl_label = "Quick Cloth Pin"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    def execute(self, context):
+        self.obj = self.get_active_obj()
+        self.mesh = self.obj.data
+        self.verts = self.mesh.vertices
+        self.locs = [vert.co.z for vert in self.verts[:]]
+        max_z = max(self.locs)
+        self.max_z_vert_data = []
+        for vert in self.verts[:]:
+            delta = abs(max_z - vert.co.z)
+            print(delta)
+            if delta < 0.01:
+                self.max_z_vert_data.append(vert.index)
+        if "pin" not in [group.name for group in self.obj.vertex_groups[:]]:
+            group = self.obj.vertex_groups.new(name="pin")
+        else:
+            group = self.obj.vertex_groups["pin"]
+        group.add(self.max_z_vert_data, 1.0, "ADD")
+
+        for mod in self.obj.modifiers[:]:
+            if mod.type == "CLOTH":
+
+                mod.settings.vertex_group_mass = "pin"
+        return {"FINISHED"}
+
+
+def deselect_parented_objs_menu_func(self, context):
+    layout = self.layout
+    layout.operator('object.deselect_parented_objs')
+
+
 classes = (
     AddCameraCustom,
     AddLightSetup,
@@ -732,4 +784,6 @@ classes = (
     OBJECT_add_empty_at_objs_center,
     OBJECT_OT_quick_transforms,
     OBJECT_OT_RemoveDoubledObjects,
+    OBJECT_OT_deselect_parented_objs,
+    OBJECT_OT_quick_cloth_pin,
 )
