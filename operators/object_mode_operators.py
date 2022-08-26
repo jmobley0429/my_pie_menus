@@ -161,12 +161,15 @@ class JG_SetUVChannels(Operator):
         return context.active_object is not None
 
     def execute(self, context):
-        objs = context.selected_objects
+        objs = [obj for obj in context.selected_objects if obj.type == "MESH"]
         obj_data = []
         for obj in objs:
             bpy.context.view_layer.objects.active = obj
             mesh = obj.data
+            if not mesh:
+                continue
             uvs = mesh.uv_layers
+
             for i, u in enumerate(uvs):
                 if i > 0:
                     mesh.uv_layers.active_index = i
