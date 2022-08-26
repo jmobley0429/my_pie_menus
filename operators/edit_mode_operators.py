@@ -372,12 +372,9 @@ class MESH_OT_smart_join_verts(CustomBmeshOperator, Operator):
         active_vert = set([self.bm.select_history.active])
         one_edge = len(sel_verts) == 2
         non_active = sel_verts - active_vert
-        if not active_vert:
-            if one_edge:
-                pass
-            else:
-                self.report({"ERROR"}, "At least one vert must be active.")
-                return {"CANCELLED"}
+        if not active_vert and not one_edge:
+            self.report({"ERROR"}, "At least one vert must be active.")
+            return {"CANCELLED"}
         if one_edge:
             bmesh.ops.connect_vert_pair(self.bm, verts=list(sel_verts))
         else:
