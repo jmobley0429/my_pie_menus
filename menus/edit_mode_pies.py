@@ -62,6 +62,7 @@ class MESH_MT_edge_menu(Menu):
         col = pie.split().column()
         col.operator("mesh.increase_cylinder_res")
         col.operator("mesh.reduce_circle_segments")
+        col.operator("mesh.edge_split")
         #
         # Right
         col = pie.split().column()
