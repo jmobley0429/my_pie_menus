@@ -128,7 +128,8 @@ class CustomModalOperator(CustomOperator):
 class CustomBmeshOperator(CustomOperator):
     @classmethod
     def bmesh(cls, context):
-        cls.mesh = context.edit_object.data
+        obj = context.active_object
+        cls.mesh = obj.data
         bm = bmesh.from_edit_mesh(cls.mesh)
         cls.bm = bm
 
