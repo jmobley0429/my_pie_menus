@@ -28,6 +28,7 @@ if "bpy" in locals():
     importlib.reload(edit_mode_pies)
     importlib.reload(object_mode_pies)
     importlib.reload(sculpt_mode_pies)
+    importlib.reload(uv_pies)
     importlib.reload(utils)
 
 else:
@@ -47,6 +48,7 @@ else:
     from my_pie_menus.menus import edit_mode_pies
     from my_pie_menus.menus import object_mode_pies
     from my_pie_menus.menus import sculpt_mode_pies
+    from my_pie_menus.menus import uv_pies
     from my_pie_menus.conf.keymap_settings import KEYMAP_SETTINGS as KMS
 
 
@@ -62,11 +64,10 @@ modules = [
     sculpt_mode_pies,
     sculpt_mode_operators,
     uv_operators,
+    uv_pies,
 ]
 
 menu_funcs = [
-    (bpy.types.IMAGE_MT_uvs_snap_pie, "append", uv_operators.origin_menu_func),
-    (bpy.types.IMAGE_MT_uvs_snap_pie, "append", uv_operators.midpoint_menu_func),
     (bpy.types.DATA_PT_modifiers, "prepend", modifier_operators.menu_func),
     (bpy.types.VIEW3D_MT_select_object, "append", object_mode_operators.deselect_parented_objs_menu_func),
 ]
@@ -104,7 +105,7 @@ def unregister():
 
 
 if __name__ == "__main__":
-
+    db.db_block('*****BEGINNING OF REGISTER*****')
     register()
     for setting in KMS:
         utils.register_keymap(setting, addon_keymaps)
