@@ -6,23 +6,10 @@ from mathutils import Vector
 from .custom_operator import CustomBmeshOperator
 
 
-class IMAGE_OT_snap_cursor_to_uv_origin(Operator):
-    bl_idname = "uv.snap_cursor_to_uv_origin"
-    bl_label = "Snap Cursor to UV Origin"
-    bl_options = {'REGISTER', 'UNDO'}
-
-    @classmethod
-    def poll(cls, context):
-        return context.area.type == "IMAGE_EDITOR"
-
-    def execute(self, context):
-        context.area.spaces.active.cursor_location = Vector((0.0, 0.0))
-        return {"FINISHED"}
-
-
 class IMAGE_OT_snap_uvs_to_midpoint(CustomBmeshOperator, Operator):
     bl_idname = "uv.snap_uvs_to_midpoint"
     bl_label = "Snap UVs to Midpoint"
+    bl_description = "Snap UVs to Midpoint"
     bl_options = {'REGISTER', 'UNDO'}
 
     direction: bpy.props.EnumProperty(
@@ -99,33 +86,58 @@ class IMAGE_OT_snap_uvs_to_midpoint(CustomBmeshOperator, Operator):
         self.mesh = self.context.edit_object.data
         self.bm = bmesh.from_edit_mesh(self.mesh)
 
-    def invoke(self, context, event):
-        self.context = context
-        self.set_bmesh()
-        self.uv_layer = self.bm.loops.layers.uv.verify()
-
-        return self.execute(context)
-
     def execute(self, context):
+        self.bmesh(context)
+        self.context = context
+        self.uv_layer = self.bm.loops.layers.uv.verify()
         for loop, delta in zip(self.selected_uvs, self.deltas):
             loop.uv = delta
         bmesh.update_edit_mesh(self.mesh)
         return {"FINISHED"}
 
 
-def origin_menu_func(self, context):
-    layout = self.layout
-    pie = layout.menu_pie()
-    pie.operator('uv.snap_cursor_to_uv_origin', text="Cursor to UV Origin", icon="WORLD_DATA")
+class IMAGE_OT_pack_with_mode(Operator):
+    bl_idname = "uv.pack_with_mode"
+    bl_label = "Pack"
+    bl_description = "UVPackmaster Pack (ALT to use Blender Default Pack)"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    mode = None
+
+    def invoke(self, context, event):
+        if event.alt:
+            self.mode = "DEFAULT"
+        return self.execute(context)
+
+    def execute(self, context):
+        if self.mode is None:
+            bpy.ops.uvpackmaster2.uv_pack()
+        else:
+            bpy.ops.uv.pack_islands()
+        return {"FINISHED"}
 
 
-def midpoint_menu_func(self, context):
-    layout = self.layout
-    pie = layout.menu_pie()
-    pie.operator('uv.snap_uvs_to_midpoint', text="Selected to Midpoint", icon="SNAP_MIDPOINT")
+class IMAGE_OT_toggle_uv_sync_selection(Operator):
+    bl_idname = "uv.toggle_uv_sync_selection"
+    bl_label = "Toggle Sync"
+    bl_description = "Toggle Sync"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    @classmethod
+    def poll(cls, context):
+        obj = context.active_object is not None
+        area_type = context.area.type == "IMAGE_EDITOR"
+        mode = "EDIT" in context.mode
+        return all([obj, area_type, mode])
+
+    def execute(self, context):
+        tools = context.scene.tool_settings
+        bpy.context.scene.tool_settings.use_uv_select_sync = not tools.use_uv_select_sync
+        return {"FINISHED"}
 
 
 classes = [
-    IMAGE_OT_snap_cursor_to_uv_origin,
     IMAGE_OT_snap_uvs_to_midpoint,
+    IMAGE_OT_toggle_uv_sync_selection,
+    IMAGE_OT_pack_with_mode,
 ]
