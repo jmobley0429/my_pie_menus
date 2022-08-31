@@ -790,3 +790,21 @@ classes = (
     OBJECT_OT_deselect_parented_objs,
     OBJECT_OT_quick_cloth_pin,
 )
+
+
+from my_pie_menus import utils
+
+
+kms = []
+
+
+def register():
+
+    utils.register_classes(classes)
+    utils.register_keymaps(kms)
+
+
+def unregister():
+    for cls in classes:
+        bpy.utils.unregister_class(cls)
+        utils.unregister_keymaps(kms)

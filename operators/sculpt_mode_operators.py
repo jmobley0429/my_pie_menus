@@ -165,3 +165,20 @@ classes = [
     BRUSH_OT_adjust_stabilize_radius,
     SCULPT_OT_change_multires_subdiv_level,
 ]
+
+
+from my_pie_menus import utils
+
+kms = []
+
+
+def register():
+
+    utils.register_classes(classes)
+    utils.register_keymaps(kms)
+
+
+def unregister():
+    for cls in classes:
+        bpy.utils.unregister_class(cls)
+        utils.unregister_keymaps(kms)

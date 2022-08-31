@@ -60,30 +60,42 @@ def write_mesh_data_to_json(obj, file_name=""):
         json.dump(data, f)
 
 
-def register_keymap(setting: dict, addon_keymaps: list) -> None:
-    '''Takes a keymap dict in this format:
-    {
-        "keymap_operator": "wm.call_menu_pie",
-        "name": "3D View",
-        "letter": "A",
-        "idname": "PIE_MT_AddMesh",
-        "shift": 1,
-        "ctrl": 0,
-        "alt": 0,
-        "space_type": "VIEW_3D",
-        "region_type": "WINDOW",
-    }
-    and creates a keymap item and keymapping.'''
+def register_keymaps(kms):
+    for keymap in kms:
+        keymap_operator = keymap.pop("keymap_operator")
+        name = keymap.pop("name")
+        letter = keymap.pop("letter")
+        shift = keymap.pop("shift")
+        ctrl = keymap.pop("ctrl")
+        alt = keymap.pop("alt")
+        space_type = keymap.pop("space_type")
+        region_type = keymap.pop("region_type")
+        keywords = keymap.pop('keywords')
 
-    args = list(dict(sorted(setting.items())).values())
-    alt, ctrl, idname, keymap_operator, letter, name, region_type, shift, space_type = args
-    wm = bpy.context.window_manager
-    kc = wm.keyconfigs.addon
-    km = kc.keymaps.new(name=name, space_type=space_type, region_type=region_type)
-    kmi = km.keymap_items.new(keymap_operator, letter, 'PRESS', shift=shift, ctrl=ctrl, alt=alt)
-    kmi.properties.name = idname
-    kmi.active = True
-    addon_keymaps.append((km, kmi))
+        wm = bpy.context.window_manager
+        kc = wm.keyconfigs.addon
+        if kc:
+            # existing_kmis = get_existing_keymap_items(name)
+            km = wm.keyconfigs.addon.keymaps.new(name=name, space_type=space_type)
+            kmi = km.keymap_items.new(keymap_operator, letter, 'PRESS', ctrl=ctrl, alt=alt, shift=shift)
+            str_vers = kmi.to_string()
+            kmi.active = True
+            # for ekmi in existing_kmis:
+            #     if str_vers == ekmi.to_string():
+            #         ekmi.active = False
+
+            for kw, value in keywords.items():
+                setattr(kmi.properties, kw, value)
+            addon_keymaps.append((km, kmi))
+
+
+def register_classes(classes):
+    for cls in classes:
+        try:
+            bpy.utils.register_class(cls)
+        except ValueError:
+            bpy.utils.unregister_class(cls)
+            bpy.utils.register_class(cls)
 
 
 def unregister_keymaps(addon_keymaps):
@@ -92,5 +104,4 @@ def unregister_keymaps(addon_keymaps):
     if kc:
         for km, kmi in addon_keymaps:
             km.keymap_items.remove(kmi)
-            kc.keymaps.remove(km)
     addon_keymaps.clear()

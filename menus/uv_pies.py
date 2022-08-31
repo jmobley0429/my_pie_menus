@@ -123,3 +123,21 @@ classes = (
     PIE_MT_UVUnwrapPie,
     IMAGE_MT_uvs_snap_pie_custom,
 )
+
+
+from my_pie_menus import utils
+
+
+kms = []
+
+
+def register():
+
+    utils.register_classes(classes)
+    utils.register_keymaps(kms)
+
+
+def unregister():
+    for cls in classes:
+        bpy.utils.unregister_class(cls)
+        utils.unregister_keymaps(kms)

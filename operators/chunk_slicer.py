@@ -457,7 +457,7 @@ class OBJECT_OT_chunk_slicer(bpy.types.Operator):
 classes = (OBJECT_OT_chunk_slicer,)
 
 
-addon_keymaps = []
+
 
 
 def register():

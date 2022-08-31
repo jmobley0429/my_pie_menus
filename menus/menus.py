@@ -25,3 +25,21 @@ class OBJECT_MT_smooth_shading_menu(Menu):
             col.operator("mesh.customdata_custom_splitnormals_clear", icon='X')
         else:
             col.operator("mesh.customdata_custom_splitnormals_add", icon='ADD')
+
+
+from my_pie_menus import utils
+
+
+kms = []
+
+
+def register():
+
+    utils.register_classes(classes)
+    utils.register_keymaps(kms)
+
+
+def unregister():
+    for cls in classes:
+        bpy.utils.unregister_class(cls)
+        utils.unregister_keymaps(kms)

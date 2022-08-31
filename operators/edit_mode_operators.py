@@ -410,4 +410,34 @@ classes = (
     MESH_OT_smart_join_verts,
 )
 
-menu_funcs = (origin_to_bot_left_menu_func,)
+kms = [
+    {
+        "keymap_operator": "mesh.reduce_cylinder",
+        "name": "Mesh",
+        "letter": "X",
+        "shift": 1,
+        "ctrl": 0,
+        "alt": 1,
+        "space_type": "VIEW_3D",
+        "region_type": "WINDOW",
+        "keywords": {},
+    },
+]
+
+
+from my_pie_menus import utils
+
+
+kms = []
+
+
+def register():
+
+    utils.register_classes(classes)
+    utils.register_keymaps(kms)
+
+
+def unregister():
+    for cls in classes:
+        bpy.utils.unregister_class(cls)
+        utils.unregister_keymaps(kms)

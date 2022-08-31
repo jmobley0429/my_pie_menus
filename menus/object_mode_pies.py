@@ -302,3 +302,43 @@ classes = (
     PIE_MT_sort_objects,
     OBJECT_MT_quick_transform_pie,
 )
+
+kms = [
+    {
+        "keymap_operator": "wm.call_menu_pie",
+        "name": "Object Mode",
+        "letter": "C",
+        "shift": 0,
+        "ctrl": 0,
+        "alt": 1,
+        "space_type": "VIEW_3D",
+        "region_type": "WINDOW",
+        "keywords": {"name": "PIE_MT_ConvertMeshCurve"},
+    },
+    {
+        "keymap_operator": "wm.call_menu_pie",
+        "name": "Object Mode",
+        "letter": "O",
+        "shift": 1,
+        "ctrl": 0,
+        "alt": 1,
+        "space_type": "VIEW_3D",
+        "region_type": "WINDOW",
+        "keywords": {"name": "PIE_MT_sort_objects"},
+    },
+]
+
+
+from my_pie_menus import utils
+
+
+def register():
+
+    utils.register_classes(classes)
+    utils.register_keymaps(kms)
+
+
+def unregister():
+    for cls in classes:
+        bpy.utils.unregister_class(cls)
+        utils.unregister_keymaps(kms)

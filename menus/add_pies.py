@@ -373,3 +373,62 @@ classes = (
     PIE_MT_AddOtherObjects,
     PIE_MT_add_armature_extended,
 )
+
+kms = [
+    {
+        "keymap_operator": "wm.call_menu_pie",
+        "name": "3D View",
+        "letter": "A",
+        "shift": 1,
+        "ctrl": 0,
+        "alt": 0,
+        "space_type": "VIEW_3D",
+        "region_type": "WINDOW",
+        "keywords": {"name": "PIE_MT_AddMesh"},
+    },
+    {
+        "keymap_operator": "wm.call_menu_pie",
+        "name": "3D View",
+        "letter": "Q",
+        "shift": 1,
+        "ctrl": 1,
+        "alt": 0,
+        "space_type": "VIEW_3D",
+        "region_type": "WINDOW",
+        "keywords": {"name": "PIE_MT_AddModifier"},
+    },
+    {
+        "keymap_operator": "wm.call_menu_pie",
+        "name": "Mesh",
+        "letter": "A",
+        "shift": 1,
+        "ctrl": 0,
+        "alt": 0,
+        "space_type": "VIEW_3D",
+        "region_type": "WINDOW",
+        "keywords": {"name": "PIE_MT_AddMesh"},
+    },
+    {
+        "keymap_operator": "wm.call_menu_pie",
+        "name": "3D View",
+        "letter": "A",
+        "shift": 1,
+        "ctrl": 1,
+        "alt": 0,
+        "space_type": "VIEW_3D",
+        "region_type": "WINDOW",
+        "keywords": {"name": "PIE_MT_AddOtherObjects"},
+    },
+]
+from my_pie_menus import utils
+
+
+def register():
+    utils.register_classes(classes)
+    utils.register_keymaps(kms)
+
+
+def unregister():
+    for cls in classes:
+        bpy.utils.unregister_class(cls)
+        utils.unregister_keymaps(kms)

@@ -141,3 +141,20 @@ classes = [
     IMAGE_OT_toggle_uv_sync_selection,
     IMAGE_OT_pack_with_mode,
 ]
+
+
+from my_pie_menus import utils
+
+kms = []
+
+
+def register():
+
+    utils.register_classes(classes)
+    utils.register_keymaps(kms)
+
+
+def unregister():
+    for cls in classes:
+        bpy.utils.unregister_class(cls)
+        utils.unregister_keymaps(kms)

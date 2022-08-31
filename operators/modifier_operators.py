@@ -283,7 +283,7 @@ class CustomAddQuickBevSubSurfModifier(BevelModifier, Operator):
         in_edit = "EDIT" in context.mode
         if in_edit:
             bpy.ops.object.mode_set(mode="OBJECT")
-        self._add_bevel_modifier(harden_normals=False, profile=1)
+        bpy.ops.object.custom_bevel_modifier()
         bpy.ops.object.modifier_add(type='SUBSURF')
         bpy.ops.object.modifier_add(type='WEIGHTED_NORMAL')
         bpy.ops.object.shade_smooth()
@@ -1075,6 +1075,13 @@ class AddDisplaceCustom(CustomModalOperator, Operator):
             new_val = getattr(self.current_texture, self.mod_channel) + (val.x * 0.1)
             setattr(self.current_texture, self.mod_channel, new_val)
 
+    def cleanup_textures(self):
+        textures = bpy.data.textures[:]
+
+        for tex in textures:
+            if "Displace" in tex.name and tex.users == 0:
+                bpy.data.textures.remove(tex)
+
     def change_texture_attr(self, attr_type="basis", prev=False):
         if prev:
             addend = -1
@@ -1164,12 +1171,14 @@ class AddDisplaceCustom(CustomModalOperator, Operator):
                 self.inverted *= -1
 
         elif event.type == "LEFTMOUSE":
+            self.cleanup_textures()
             self._clear_info(context)
 
             return {"FINISHED"}
         elif event.type in {"RIGHTMOUSE", "ESC"}:
             self._clear_info(context)
             bpy.ops.object.modifier_remove(modifier=self.mod.name)
+            self.cleanup_textures()
             self.dp_coll.objects.unlink(self.empty)
             if len(self.dp_coll.objects[:]) == 0:
                 self.scene_coll.children.unlink(self.dp_coll)
@@ -1276,3 +1285,21 @@ classes = {
     ToggleSubDivVisibility,
     ToggleClipping,
 }
+
+
+from my_pie_menus import utils
+
+
+kms = []
+
+
+def register():
+    utils.register_classes(classes)
+
+    utils.register_keymaps(kms)
+
+
+def unregister():
+    for cls in classes:
+        bpy.utils.unregister_class(cls)
+        utils.unregister_keymaps(kms)

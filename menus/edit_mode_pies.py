@@ -119,7 +119,7 @@ class MESH_MT_face_menu(Menu):
 
 
 class MESH_MT_merge_verts_pie(Menu):
-    bl_idname = 'VIEW3D_merge_verts_pie'
+    bl_idname = 'MESH_MT_merge_verts_pie'
     bl_label = "Merge Verts"
     bl_options = {"REGISTER", "UNDO"}
 
@@ -194,3 +194,64 @@ classes = (
     MESH_MT_PIE_select_by_trait,
     MESH_MT_PIE_cleanup,
 )
+
+kms = [
+    {
+        "keymap_operator": "wm.call_menu_pie",
+        "name": "Mesh",
+        "letter": "ONE",
+        "shift": False,
+        "ctrl": False,
+        "alt": True,
+        "space_type": "VIEW_3D",
+        "region_type": "WINDOW",
+        "keywords": {"name": "MESH_MT_PIE_loop_tools"},
+    },
+    {
+        "keymap_operator": "wm.call_menu_pie",
+        "name": "Mesh",
+        "letter": "Q",
+        "shift": True,
+        "ctrl": False,
+        "alt": False,
+        "space_type": "VIEW_3D",
+        "region_type": "WINDOW",
+        "keywords": {"name": "MESH_MT_PIE_symmetrize"},
+    },
+    {
+        "keymap_operator": "wm.call_menu_pie",
+        "name": "Mesh",
+        "letter": "E",
+        "shift": True,
+        "ctrl": True,
+        "alt": False,
+        "space_type": "VIEW_3D",
+        "region_type": "WINDOW",
+        "keywords": {"name": "MESH_MT_edge_menu"},
+    },
+    {
+        "keymap_operator": "wm.call_menu_pie",
+        "name": "Mesh",
+        "letter": "E",
+        "shift": True,
+        "ctrl": True,
+        "alt": False,
+        "space_type": "VIEW_3D",
+        "region_type": "WINDOW",
+        "keywords": {"name": "MESH_MT_face_menu"},
+    },
+]
+
+from my_pie_menus import utils
+
+
+def register():
+
+    utils.register_classes(classes)
+    utils.register_keymaps(kms)
+
+
+def unregister():
+    for cls in classes:
+        bpy.utils.unregister_class(cls)
+        utils.unregister_keymaps(kms)

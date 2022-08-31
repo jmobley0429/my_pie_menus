@@ -80,3 +80,20 @@ classes = (
     PIE_MT_hide_mask_brushes,
     PIE_MT_init_face_sets,
 )
+
+
+from my_pie_menus import utils
+
+
+kms = []
+
+
+def register():
+    utils.register_classes(classes)
+    utils.register_keymaps(kms)
+
+
+def unregister():
+    for cls in classes:
+        bpy.utils.unregister_class(cls)
+        utils.unregister_keymaps(kms)

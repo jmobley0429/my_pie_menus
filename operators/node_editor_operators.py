@@ -104,3 +104,67 @@ classes = [
     NODE_OT_node_align,
     NODE_OT_node_average_distance,
 ]
+
+kms = [
+    {
+        "keymap_operator": "node.align",
+        "name": "Node Editor",
+        "letter": "W",
+        "shift": 1,
+        "ctrl": 0,
+        "alt": 1,
+        "space_type": "NODE_EDITOR",
+        "region_type": "WINDOW",
+        "keywords": {"direction": "TOP"},
+    },
+    {
+        "keymap_operator": "node.align",
+        "name": "Node Editor",
+        "letter": "S",
+        "shift": 1,
+        "ctrl": 0,
+        "alt": 1,
+        "space_type": "NODE_EDITOR",
+        "region_type": "WINDOW",
+        "keywords": {"direction": "BOTTOM"},
+    },
+    {
+        "keymap_operator": "node.align",
+        "name": "Node Editor",
+        "letter": "D",
+        "shift": 1,
+        "ctrl": 0,
+        "alt": 1,
+        "space_type": "NODE_EDITOR",
+        "region_type": "WINDOW",
+        "keywords": {"direction": "RIGHT"},
+    },
+    {
+        "keymap_operator": "node.align",
+        "name": "Node Editor",
+        "letter": "A",
+        "shift": 1,
+        "ctrl": 0,
+        "alt": 1,
+        "space_type": "NODE_EDITOR",
+        "region_type": "WINDOW",
+        "keywords": {"direction": "LEFT"},
+    },
+]
+
+
+from my_pie_menus import utils
+
+global addon_keymaps
+
+
+def register():
+
+    utils.register_classes(classes)
+    utils.register_keymaps(kms)
+
+
+def unregister():
+    for cls in classes:
+        bpy.utils.register_class(cls)
+        utils.unregister_keymaps(kms)
