@@ -9,12 +9,23 @@ bl_info = {
 }
 
 import bpy
+from my_pie_menus.resources import utils
+import os 
+
+os.path.join(
+
+
 
 
 class RefreshAddonProps(bpy.types.PropertyGroup):
+    vers = utils.get_blender_version()
+    if utils.is_linux():
+        scripts_path = os.path.join(r"C:\Users\Jake\AppData\Roaming\Blender Foundation\Blender", vers, r"scripts\addons\")
+    else:
+        '/home/jake/blender/projects/scripts/'
     refresh_addon_filepath: bpy.props.StringProperty(
         name="File Path",
-        default='/home/jake/blender/projects/scripts/',
+        default=scripts_path,
         subtype="FILE_PATH",
     )
     refresh_addon_module_name: bpy.props.StringProperty(name="Module Name")
@@ -56,6 +67,9 @@ class TEXT_PT_RefreshSingleAddonPanel(bpy.types.Panel):
         op = layout.operator("preferences.refresh_single_addon")
 
 
+addon_keymaps = []
+
+
 def register():
     bpy.utils.register_class(RefreshAddonProps)
     bpy.types.WindowManager.refresh_props = bpy.props.PointerProperty(type=RefreshAddonProps)
@@ -78,12 +92,13 @@ from my_pie_menus import utils
 
 
 kms = []
+addon_keymaps = []
 
 
 def register():
 
     utils.register_classes(classes)
-    utils.register_keymaps(kms)
+    utils.register_keymaps(kms, addon_keymaps)
 
 
 def unregister():

@@ -76,8 +76,6 @@ menu_funcs = [
     (bpy.types.VIEW3D_MT_select_object, "append", object_mode_operators.deselect_parented_objs_menu_func),
 ]
 
-classes = [cls for module in modules for cls in module.classes]
-classes.sort(key=lambda cls: cls.bl_idname)
 
 global addon_keymaps
 addon_keymaps = []
@@ -85,11 +83,13 @@ addon_keymaps = []
 
 def register():
     for module in modules:
+        print(f"registering {module.__name__}")
         module.register()
 
 
 def unregister():
     for module in modules:
+        
         module.unregister()
 
 

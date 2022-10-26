@@ -157,11 +157,13 @@ from my_pie_menus import utils
 
 global addon_keymaps
 
+addon_keymaps = []
+
 
 def register():
 
     utils.register_classes(classes)
-    utils.register_keymaps(kms)
+    utils.register_keymaps(kms, addon_keymaps)
 
 
 def unregister():

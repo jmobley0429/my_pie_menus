@@ -81,15 +81,15 @@ from my_pie_menus import utils
 
 kms = []
 
+addon_keymaps = []
+
 
 def register():
-    sculpt_mode_pies.create_icons()
     utils.register_classes(classes)
-    utils.register_keymaps(kms)
+    utils.register_keymaps(kms, addon_keymaps)
 
 
 def unregister():
-    sculpt_mode_pies.release_icons()
     for cls in classes:
         bpy.utils.unregister_class(cls)
         utils.unregister_keymaps(kms)

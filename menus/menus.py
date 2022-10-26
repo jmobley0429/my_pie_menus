@@ -30,13 +30,20 @@ class OBJECT_MT_smooth_shading_menu(Menu):
 from my_pie_menus import utils
 
 
+
+
 kms = []
+
+classes = [
+    OBJECT_PT_jake_tools_panel,
+]
+
+addon_keymaps = []
 
 
 def register():
-
     utils.register_classes(classes)
-    utils.register_keymaps(kms)
+    utils.register_keymaps(kms, addon_keymaps)
 
 
 def unregister():

@@ -85,15 +85,43 @@ classes = (
 from my_pie_menus import utils
 
 
-kms = []
+kms = [
+    {
+        "keymap_operator": "wm.call_menu_pie",
+        "name": "Sculpt",
+        "letter": "ONE",
+        "shift": 0,
+        "ctrl": 0,
+        "alt": 1,
+        "space_type": "VIEW_3D",
+        "region_type": "WINDOW",
+        "keywords": {"name": "PIE_MT_init_face_sets"},
+    },
+    {
+        "keymap_operator": "wm.call_menu_pie",
+        "name": "Sculpt",
+        "letter": "TWO",
+        "shift": 0,
+        "ctrl": 0,
+        "alt": 1,
+        "space_type": "VIEW_3D",
+        "region_type": "WINDOW",
+        "keywords": {"name": "PIE_MT_hide_mask_brushes"},
+    },
+]
+
+addon_keymaps = []
 
 
 def register():
+    create_icons()
     utils.register_classes(classes)
-    utils.register_keymaps(kms)
+    utils.register_keymaps(kms, addon_keymaps)
 
 
 def unregister():
+    release_icons()
+
     for cls in classes:
         bpy.utils.unregister_class(cls)
         utils.unregister_keymaps(kms)

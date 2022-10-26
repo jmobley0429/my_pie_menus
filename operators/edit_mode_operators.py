@@ -107,6 +107,30 @@ class MESH_OT_quick_tris_to_quads(CustomOperator, Operator):
         return {"FINISHED"}
 
 
+def verify_weight_layer(self):
+    if self.weight_type == "BEVEL":
+        self.weight_layer = self.bm.edges.layers.bevel_weight.verify()
+    elif self.weight_type == "CREASE":
+        self.weight_layer = self.bm.edges.layers.crease.verify()
+
+
+def set_edge_weight(self, edge):
+    if self.clear is not None:
+        val = self.clear
+    else:
+        val = not edge[self.weight_layer]
+    edge[self.weight_layer] = float(val)
+
+
+def set_edges_weight(self):
+    for edge in self.sel_edges:
+        try:
+            set_edge_weight(self, edge)
+        except ReferenceError:
+            self.bmesh(context)
+            set_edges_weight(self)
+
+
 class MESH_OT_toggle_edge_weight(CustomBmeshOperator, Operator):
 
     bl_idname = "mesh.toggle_edge_weight"
@@ -134,35 +158,14 @@ class MESH_OT_toggle_edge_weight(CustomBmeshOperator, Operator):
         self.bmesh(context)
         return self.execute(context)
 
-    def set_edge_weight(self, edge):
-        if self.clear is not None:
-            val = self.clear
-        else:
-            val = not edge[self.weight_layer]
-        edge[self.weight_layer] = float(val)
-
-    def set_edges_weight(self):
-        for edge in self.sel_edges:
-            try:
-                self.set_edge_weight(edge)
-            except ReferenceError:
-                self.bmesh(context)
-                self.set_edges_weight()
-
-    def verify_weight_layer(self):
-        if self.weight_type == "BEVEL":
-            self.weight_layer = self.bm.edges.layers.bevel_weight.verify()
-        elif self.weight_type == "CREASE":
-            self.weight_layer = self.bm.edges.layers.crease.verify()
-
     def execute(self, context):
-        self.verify_weight_layer()
-        self.set_edges_weight()
+        verify_weight_layer(self)
+        set_edges_weight(self)
         bmesh.update_edit_mesh(context.edit_object.data)
         return {"FINISHED"}
 
 
-class MESH_OT_set_sharp_to_weighted(MESH_OT_toggle_edge_weight, CustomBmeshOperator, Operator):
+class MESH_OT_set_sharp_to_weighted(CustomBmeshOperator, Operator):
     bl_idname = "mesh.set_sharp_to_weighted"
     bl_label = "Sharp To Weighted"
     bl_options = {'REGISTER', 'UNDO'}
@@ -187,8 +190,8 @@ class MESH_OT_set_sharp_to_weighted(MESH_OT_toggle_edge_weight, CustomBmeshOpera
         stored_edges = [e for e in self.sel_edges]
         self.select_edges(context, self.bm.edges[:], select=False)
         self.select_sharp_edges(threshold=self.sharp_angle)
-        self.verify_weight_layer()
-        self.set_edges_weight()
+        verify_weight_layer(self)
+        set_edges_weight(self)
         if stored_edges:
             self.select_edges(context, self.bm.edges[:], select=False)
             self.select_edges(context, stored_edges, select=True)
@@ -196,7 +199,7 @@ class MESH_OT_set_sharp_to_weighted(MESH_OT_toggle_edge_weight, CustomBmeshOpera
         return {"FINISHED"}
 
 
-class MESH_OT_set_boundary_to_weighted(MESH_OT_toggle_edge_weight, CustomBmeshOperator, Operator):
+class MESH_OT_set_boundary_to_weighted(CustomBmeshOperator, Operator):
     bl_idname = "mesh.set_boundary_to_weighted"
     bl_label = "Boundary To Weighted"
     bl_options = {'REGISTER', 'UNDO'}
@@ -215,8 +218,8 @@ class MESH_OT_set_boundary_to_weighted(MESH_OT_toggle_edge_weight, CustomBmeshOp
         obj = self.get_active_obj()
         stored_edges = [e for e in self.sel_edges]
         self.select_edges(context, self.bm.edges[:], select=False, skip_callback_func=self.is_boundary_edge)
-        self.verify_weight_layer()
-        self.set_edges_weight()
+        verify_weight_layer(self)
+        set_edges_weight(self)
         self.bmesh(context)
         if stored_edges:
             self.select_edges(context, self.bm.edges[:], select=False)
@@ -386,6 +389,98 @@ class MESH_OT_smart_join_verts(CustomBmeshOperator, Operator):
         return {"FINISHED"}
 
 
+def toggle_retopo_visibility(context):
+    sd = context.space_data
+    obj = context.object
+    hidden_wire = sd.show_occlude_wire
+    in_front = obj.show_in_front
+    wire = obj.show_wire
+    overlays = [hidden_wire, in_front, wire]
+
+    toggled = all(overlays)
+    for ol in overlays:
+        ol = toggled
+
+
+
+class MESH_toggle_retopo_visibility(Operator):
+    bl_idname = "mesh.toggle_retopo_visibility"
+    bl_label = "Toggle Retopo View"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    @classmethod
+    def poll(cls, context):
+        return context.active_object is not None
+
+    def execute(self, context):
+        toggle_retopo_visibility(context)
+        return {"FINISHED"}
+
+
+def get_bm(context):
+    obj = context.edit_object
+    mesh = obj.data
+    bm = bmesh.from_edit_mesh(mesh)
+    return bm
+
+
+def has_sel_faces(context):
+    bm = get_bm(context)
+    sel_faces = bool(get_selected(bm, "faces"))
+    bm.free()
+    del bm
+    return sel_faces
+
+def get_selected(mesh, elem_type):
+    return [elem for elem in getattr(mesh, elem_type)[:] if elem.select]
+
+def get_face_edges(bm, face):
+    edges = [edge.index for edge in face.edges[:]]
+    ret = [edge for edge in bm.edges[:] if edge.index in edges]
+    return ret
+
+def dissolve_faces(bm, faces):
+    
+    return ret["faces"]
+
+        
+def smart_grid_fill(context, args):
+    span = args.pop('span')
+    offset = args.pop('offset')
+    obj = context.edit_object
+    bm = get_bm(context)
+    sel_faces = get_selected(bm, "faces")
+    if sel_faces:
+        if len(sel_faces) > 1:
+            ret = bmesh.ops.dissolve_faces(bm, faces=sel_faces)  
+            face = ret["region"][0]   
+        else:
+            face = sel_faces[0]
+        face_edges = get_face_edges(bm, face)
+        bm.faces.remove(face)
+        for edge in face_edges[:]:
+            edge.select_set(True)
+        bm.select_flush(True)
+        bmesh.update_edit_mesh(obj.data)
+    bpy.ops.mesh.fill_grid("INVOKE_DEFAULT", span=span, offset=offset)
+
+class MESH_OT_smart_grid_fill(Operator):
+    bl_idname = "mesh.smart_grid_fill"
+    bl_label = "Grid Fill"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    span: bpy.props.IntProperty(default=1, name="Span")
+    offset: bpy.props.IntProperty(default=0, name="Offset")
+
+    @classmethod
+    def poll(cls, context):
+        return context.active_object is not None and "EDIT" in context.mode
+
+    def execute(self, context):
+        args = self.as_keywords()
+        smart_grid_fill(context, args)
+        return {"FINISHED"}
+
 def origin_to_bot_left_menu_func(self, context):
     layout = self.layout
     pie = layout.menu_pie()
@@ -408,6 +503,8 @@ classes = (
     MESH_OT_origin_to_bottom_left,
     ToggleAnnotateProps,
     MESH_OT_smart_join_verts,
+    MESH_toggle_retopo_visibility,
+    MESH_OT_smart_grid_fill
 )
 
 kms = [
@@ -415,6 +512,17 @@ kms = [
         "keymap_operator": "mesh.reduce_cylinder",
         "name": "Mesh",
         "letter": "X",
+        "shift": 1,
+        "ctrl": 0,
+        "alt": 1,
+        "space_type": "VIEW_3D",
+        "region_type": "WINDOW",
+        "keywords": {},
+    },
+    {
+        "keymap_operator": "view3d.toggle_annotate",
+        "name": "Object Mode",
+        "letter": "D",
         "shift": 1,
         "ctrl": 0,
         "alt": 1,
@@ -430,14 +538,17 @@ from my_pie_menus import utils
 
 kms = []
 
+addon_keymaps = []
+
 
 def register():
-
     utils.register_classes(classes)
-    utils.register_keymaps(kms)
+    utils.register_keymaps(kms, addon_keymaps)
+    bpy.types.WindowManager.ToggleAnnotateProps = bpy.props.PointerProperty(type=ToggleAnnotateProps)
 
 
 def unregister():
     for cls in classes:
         bpy.utils.unregister_class(cls)
         utils.unregister_keymaps(kms)
+    del bpy.types.WindowManager.ToggleAnnotateProps

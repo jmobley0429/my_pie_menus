@@ -70,7 +70,7 @@ class PIE_MT_UVUnwrapPie(Menu):
         props = context.scene.uvp2_props
         pie = layout.menu_pie()
         # L
-        pie.operator("uv.pack_with_mode", text="Pack")
+        pie.operator("uvpackmaster2.uv_pack", text="Pack")
         # R
         pie.operator("uv.textools_rectify")
         # B
@@ -128,13 +128,38 @@ classes = (
 from my_pie_menus import utils
 
 
-kms = []
+kms = [
+    {
+        "keymap_operator": "wm.call_menu_pie",
+        "name": "UV Editor",
+        "letter": "Q",
+        "shift": 1,
+        "ctrl": 1,
+        "alt": 0,
+        "space_type": "IMAGE_EDITOR",
+        "region_type": "WINDOW",
+        "keywords": {"name": "PIE_MT_UVUnwrapPie"},
+    },
+    {
+        "keymap_operator": "wm.call_menu_pie",
+        "name": "UV Editor",
+        "letter": "S",
+        "shift": 1,
+        "ctrl": 0,
+        "alt": 0,
+        "space_type": "IMAGE_EDITOR",
+        "region_type": "WINDOW",
+        "keywords": {"name": "IMAGE_MT_uvs_snap_pie_custom"},
+    },
+]
+
+addon_keymaps = []
 
 
 def register():
 
     utils.register_classes(classes)
-    utils.register_keymaps(kms)
+    utils.register_keymaps(kms, addon_keymaps)
 
 
 def unregister():

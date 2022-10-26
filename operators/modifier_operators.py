@@ -270,6 +270,73 @@ class CustomAddBevelModifier(BevelModifier, CustomModalOperator, Operator):
         return {"RUNNING_MODAL"}
 
 
+def apply_relevant_mods(obj):
+    relevant_mods = [
+        "SOLIDIFY",
+    ]
+    for mod in obj.modifiers[:]:
+        if mod.type in relevant_mods:
+            bpy.ops.object.modifier_apply(modifier=mod.name)
+
+
+def set_angle(edge, sharpness, creases):
+    try:
+        angle = edge.calc_face_angle()
+    except ValueError:
+        angle = 0.0
+    print("ANGLE: ", angle)
+
+    delta = angle - np.radians(sharpness)
+    print("DELTA: ", delta)
+    if delta >= 0.001:
+        edge[creases] = 1.0
+    else:
+        edge[creases] = 0.0
+    print("CREASE_AMT: ", edge[creases])
+
+
+def auto_crease_subdivide(context, args):
+    sharpness = args.pop('sharpness')
+    in_edit = "EDIT" in context.mode
+    if in_edit:
+        bpy.ops.object.mode_set(mode="OBJECT")
+    for obj in context.selected_objects:
+        if obj.type == "MESH":
+            context.view_layer.objects.active = obj
+            apply_relevant_mods(obj)
+            me = obj.data
+            bm = bmesh.new()
+            bm.from_mesh(me)
+
+            creases = bm.edges.layers.crease.verify()
+
+            for edge in bm.edges[:]:
+                set_angle(edge, sharpness, creases)
+            bm.to_mesh(me)
+            bpy.ops.object.modifier_add(type="SUBSURF")
+            bm.free()
+    if in_edit:
+        bpy.ops.object.mode_set(mode="EDIT")
+
+
+class OBJECT_OT_auto_crease_subdivide(bpy.types.Operator):
+    """Automatically set sharp edges to creased and adds a subsurf mod. Will apply Solidify modifiers."""
+
+    bl_idname = "object.auto_crease_subdivide"
+    bl_label = "Simple Object Operator"
+
+    sharpness: bpy.props.FloatProperty(name="Sharpness", description="Degree to set sharp angles at.", default=45.0)
+
+    @classmethod
+    def poll(cls, context):
+        return context.active_object is not None
+
+    def execute(self, context):
+        args = self.as_keywords()
+        auto_crease_subdivide(context, args)
+        return {'FINISHED'}
+
+
 class CustomAddQuickBevSubSurfModifier(BevelModifier, Operator):
     """Add Custom Bevel Modifier with Subsurf"""
 
@@ -283,7 +350,7 @@ class CustomAddQuickBevSubSurfModifier(BevelModifier, Operator):
         in_edit = "EDIT" in context.mode
         if in_edit:
             bpy.ops.object.mode_set(mode="OBJECT")
-        bpy.ops.object.custom_bevel_modifier()
+        self._add_bevel_modifier()
         bpy.ops.object.modifier_add(type='SUBSURF')
         bpy.ops.object.modifier_add(type='WEIGHTED_NORMAL')
         bpy.ops.object.shade_smooth()
@@ -374,41 +441,51 @@ class CustomShrinkwrap(CustomOperator, Operator):
     bl_idname = "object.custom_shrinkwrap"
     bl_label = "Add Custom Shrinkwrap"
 
+    apply_projection = False
+
     @classmethod
     def poll(cls, context):
         obj = context.active_object
         return obj is not None and obj.type in {"MESH", "CURVE"}
 
+    def invoke(self, context, event):
+        if event.alt:
+            self.apply_projection = True
+        return self.execute(context)
+
     def execute(self, context):
         num_objs = len(bpy.context.selected_objects)
         if num_objs < 2:
-            self.report({'INFO'}, 'Select a modified and target object!')
-            return {'CANCELLED'}
-        mod, target = self.get_mod_and_target_objects()
-        bpy.context.view_layer.objects.active = mod
-        bpy.ops.object.modifier_add(type="SHRINKWRAP")
+            bpy.ops.object.modifier_add(type="SHRINKWRAP")
+            self.apply_projection = False
+        else:
+            mod, target = self.get_mod_and_target_objects()
+            bpy.context.view_layer.objects.active = mod
+            bpy.ops.object.modifier_add(type="SHRINKWRAP")
         sw = self._get_last_modifier()
         sw.target = target
         sw.wrap_mode = "ABOVE_SURFACE"
+        sw.show_on_cage = True
         sw.offset = 0.0001
-
+        if self.apply_projection:
+            bpy.ops.object.modifier_apply(modifier=sw.name)
         return {"FINISHED"}
 
 
-class CustomLattice(CustomOperator, Operator):
-    """Add Custom Lattice Modifier"""
+# class CustomLattice(CustomOperator, Operator):
+#     """Add Custom Lattice Modifier"""
 
-    bl_idname = "object.custom_lattice"
-    bl_label = "Add Custom Lattice"
-    bl_options = {"REGISTER", "UNDO"}
+#     bl_idname = "object.custom_lattice"
+#     bl_label = "Add Custom Lattice"
+#     bl_options = {"REGISTER", "UNDO"}
 
-    def execute(self, context):
-        bpy.ops.object.modifier_add(type="LATTICE")
-        lat = self._get_last_modifier()
-        bpy.ops.object.smart_add_lattice()
-        obj = self.get_active_obj()
-        lat.object = obj
-        return {"FINISHED"}
+#     def execute(self, context):
+#         bpy.ops.object.modifier_add(type="LATTICE")
+#         lat = self._get_last_modifier()
+#         bpy.ops.object.smart_add_lattice()
+#         obj = self.get_active_obj()
+#         lat.object = obj
+#         return {"FINISHED"}
 
 
 class CustomRemesh(CustomOperator, Operator):
@@ -448,7 +525,7 @@ class CustomDecimate(CustomOperator, Operator):
         return obj is not None and obj.type in {"MESH", "CURVE"}
 
     def invoke(self, context, event):
-        self.mode = context.mode
+        self.mode = self.get_current_mode(context)
         if event.alt:
             self.apply_mod = True
         return self.execute(context)
@@ -459,7 +536,7 @@ class CustomDecimate(CustomOperator, Operator):
             self.to_mode("OBJECT")
         bpy.ops.object.modifier_add(type="DECIMATE")
         mod = self._get_last_modifier()
-        mod.ratio = 0.1
+        mod.ratio = 0.2
         if self.apply_mod:
             bpy.ops.object.modifier_apply(modifier=mod.name)
         if switch_mode:
@@ -751,30 +828,86 @@ class ScrewModalOperator(CustomModalOperator, Operator):
             return {'CANCELLED'}
 
 
-class AddLatticeCustom(CustomOperator, Operator):
-    bl_idname = "object.smart_add_lattice"
+class CustomLattice(CustomModalOperator, Operator):
+    bl_idname = "object.custom_lattice"
     bl_label = "Add Smart Lattice"
     bl_options = {"REGISTER", "UNDO"}
+    current_axis = "u"
+    axes_dict = dict(zip(list('xyz'), list('uvw')))
 
-    def execute(self, context):
-        obj = self.get_active_obj()
-        if obj:
-            bpy.ops.object.add(type="LATTICE")
-            lattice = self.get_active_obj()
-            dims = obj.dimensions
-            ldims = lattice.dimensions
-            scale_fac = Vector([d / l for l, d in zip(ldims, dims)])
-            mx = obj.matrix_world
-            center = utils.get_bbox_center(obj, mx)
-            lattice.location = center
-            lattice.scale *= scale_fac
-            lattice.data.points_u = 4
-            lattice.data.points_v = 3
-            lattice.data.points_w = 3
+
+    @property
+    def current_lattice_axis_val(self):
+        return getattr(self.lattice.data, f"points_{self.current_axis}")
+
+    def invoke(self, context, event):
+        self.obj = self.get_active_obj()
+        bpy.ops.object.add(type="LATTICE")
+        self.lattice = self.get_active_obj()
+        if not self.obj:
+            return {"FINISHED"}
         else:
-            bpy.ops.object.add(type="LATTICE")
+            context.view_layer.objects.active = self.obj
+        bpy.ops.object.modifier_add(type="LATTICE")
+        lat_mod = self._get_last_modifier()
+        lat_mod.object = self.lattice
+        dims = self.obj.dimensions
+        ldims = self.lattice.dimensions
+        scale_fac = Vector([d / l for l, d in zip(ldims, dims)])
+        mx = self.obj.matrix_world
+        center = utils.get_bbox_center(self.obj, mx)
+        self.lattice.name = f"lattice_{self.obj.name}"
+        self.lattice.location = center
+        self.lattice.rotation_euler = self.obj.rotation_euler
+        self.lattice.scale *= scale_fac
+        self.lattice.data.points_u = 3
+        self.lattice.data.points_v = 3
+        self.lattice.data.points_w = 3
+        self.mod = self._get_last_modifier()
+        
+        context.window_manager.modal_handler_add(self)
+        print("ADDED MODAL")
+        return {"RUNNING_MODAL"}
 
-        return {'FINISHED'}
+        
+        
+    @property
+    def get_info_msg(self):
+        lines = [f"CURRENT AXIS: {self.current_axis.upper()}"]
+        for ax in list("uvw"):
+            letter = ax.upper()
+            val = getattr(self.lattice.data, f'points_{ax}')
+            lines.append(f"{letter}: {val}")
+        
+        return ', '.join(lines)
+
+
+    def modal(self, context, event):
+        e = event
+        et = e.type
+        self.display_modal_info(self.get_info_msg, context)
+        if et in list('UVW'):
+            self.current_axis = et.lower()
+        elif et in list('XYZ'):
+            self.current_axis = self.axes_dict[et.lower()]
+        elif et in {"WHEELUPMOUSE", "WHEELDOWNMOUSE"}:
+            curr_val = self.current_lattice_axis_val
+            if "DOWN" in et:
+                setattr(self.lattice.data, f'points_{self.current_axis}', curr_val - 1)
+            else:
+                setattr(self.lattice.data, f'points_{self.current_axis}', curr_val + 1)
+        elif event.type == "LEFTMOUSE":
+            self._clear_info(context)
+            return {"FINISHED"}
+        elif event.type in {"RIGHTMOUSE", "ESC"}:
+            self._clear_info(context)
+            bpy.ops.object.modifier_remove(modifier=self.mod.name)
+            context.collection.objects.unlink(self.lattice)
+            return {"CANCELLED"}
+
+        
+
+        return {'RUNNING_MODAL'}
 
 
 class AddDisplaceCustom(CustomModalOperator, Operator):
@@ -1280,10 +1413,11 @@ classes = {
     ArrayModalOperator,
     SolidifyModalOperator,
     ScrewModalOperator,
-    AddLatticeCustom,
+    # AddLatticeCustom,
     AddDisplaceCustom,
     ToggleSubDivVisibility,
     ToggleClipping,
+    OBJECT_OT_auto_crease_subdivide,
 }
 
 
@@ -1292,11 +1426,13 @@ from my_pie_menus import utils
 
 kms = []
 
+addon_keymaps = []
+
 
 def register():
     utils.register_classes(classes)
 
-    utils.register_keymaps(kms)
+    utils.register_keymaps(kms, addon_keymaps)
 
 
 def unregister():

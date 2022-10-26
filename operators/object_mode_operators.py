@@ -2,11 +2,14 @@ import bpy
 import bmesh
 import json
 import re
+import os
 import numpy as np
 from mathutils import Euler, Vector
 from collections import defaultdict
 from pathlib import Path
 from bpy.types import Operator
+
+from my_pie_menus.resources import utils
 
 from .custom_operator import (
     CustomOperator,
@@ -348,7 +351,7 @@ class OBJECT_OT_sort_items_on_axis(AlignOperator, CustomModalOperator, Operator)
     def sort_objs_size(self, average=True):
         def get_obj_dims(obj):
             if average:
-                return np.np(obj.location)
+                return np.mean(obj.location)
             else:
                 return getattr(obj.location, self.axis)
 
@@ -770,9 +773,179 @@ class OBJECT_OT_quick_cloth_pin(CustomBmeshOperator, Operator):
         return {"FINISHED"}
 
 
+def toggle_multires(context, args):
+    highest = args.pop("highest")
+
+    for obj in context.selected_objects[:]:
+        if obj.type == "MESH":
+            for mod in obj.modifiers[:]:
+                if mod.type == "MULTIRES":
+                    if highest:
+                        mod.levels = mod.total_levels
+                    else:
+                        mod.levels = 0
+
+
+class OBJECT_OT_toggle_multires(CustomBmeshOperator, Operator):
+    bl_idname = "object.toggle_multires"
+    bl_label = "Toggle Multires"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    highest: bpy.props.BoolProperty(name="All to Highest", default=False)
+
+    def execute(self, context):
+        args = self.as_keywords()
+        toggle_multires(context, args)
+        return {"FINISHED"}
+
+
 def deselect_parented_objs_menu_func(self, context):
     layout = self.layout
     layout.operator('object.deselect_parented_objs')
+
+def hide_widget_objects_menu_func(self, context):
+    layout = self.layout
+    layout.operator('object.move_widgets_to_collection')
+
+def deselect_modifier_panel_ops(self, context):
+    layout = self.layout
+    col = layout.column(align=True)
+    row = col.row(align=True)
+    row.operator('object.toggle_subdiv_vis')
+    row.operator('object.toggle_mirror_clipping')
+    row = col.row(align=True)
+    op = row.operator(
+        'object.toggle_multires',
+        text="Multires to Lowest",
+    )
+    op.highest = False
+    op = row.operator('object.toggle_multires', text="Multires to Highest")
+    op.highest = True
+
+def is_widget(obj):
+    return obj.type == "MESH" and "WGT" in obj.name
+    
+def create_wgt_collection():
+    coll_exists = False
+    try: 
+        coll = bpy.data.collections['wgts']
+    except KeyError:
+        coll = bpy.data.collections.new('wgts')
+    return coll
+
+def coll_index():
+    for i, coll in enumerate(bpy.data.collections[:]):
+        print(i, coll)
+        if coll.name == "wgts":
+            return i
+        
+def move_objects(context):
+    coll = create_wgt_collection()
+    for obj in bpy.data.objects[:]:
+        if is_widget(obj):
+            user_col = obj.users_collection[0]
+            user_col.objects.unlink(obj)
+            coll.objects.link(obj)
+                
+           
+            
+    coll.hide_viewport = True        
+        
+
+class OBJECT_OT_move_wgts_to_collection(bpy.types.Operator):
+    bl_idname = "object.move_widgets_to_collection"
+    bl_label = "Hide WGT Objects"
+    bl_options = {"REGISTER", "UNDO"}
+    
+    @classmethod
+    def poll(cls, context):
+        return context.mode == "OBJECT"
+    
+    def execute(self, context):
+        move_objects(context)
+        return {"FINISHED"}  
+
+
+class OBJECT_OT_clean_up_quadremesh_names(bpy.types.Operator):
+    bl_idname = "object.clean_up_quadremesh_names"
+    bl_label = "Clean Up QuadRemesh Names"
+    bl_options = {"REGISTER", "UNDO"}
+    
+    @classmethod
+    def poll(cls, context):
+        return True
+    
+    def execute(self, context):
+        for obj in bpy.data.objects[:]:
+            obj.name = obj.name.replace('Retopo_','')
+        return {"FINISHED"}  
+
+
+    
+def generate_random_v_colors_per_obj(context, **args):
+    multi_obj = args.pop('multi_obj')
+    objs = context.selected_objects[:]
+    colors = []
+    margin = .03
+
+    def generate_color():
+        too_close = False
+        color = np.random.random_sample((3,))
+        color = np.append(color, 1.0)
+        for col in colors:
+            col_avg = np.mean(col)
+            new_col_avg = np.mean(color)
+            diff = col_avg - new_col_avg
+            if abs(diff) < margin:
+                too_close = True
+        if not too_close:
+            colors.append(color)
+            return color
+        return generate_color()
+    
+    if not multi_obj:
+        color = generate_color()
+
+    for obj in objs:
+        mesh = obj.data
+        vcol = mesh.vertex_colors
+        color_layer = vcol['Col'] if vcol else vcol.new()
+        if multi_obj:
+            color = generate_color()
+        i = 0
+        for poly in mesh.polygons[:]:
+            for loop in poly.loop_indices:
+                color_layer.data[i].color = color
+                i+=1
+
+
+
+class OBJECT_OT_generate_random_v_colors_per_obj(bpy.types.Operator):
+    bl_idname = "object.generate_random_v_colors_per_obj"
+    bl_label = "Random Vertex Color Per Object"
+    bl_options = {"REGISTER", "UNDO"}
+
+    multi_obj: bpy.props.BoolProperty(
+        default=False, 
+        name="Multi Object", 
+        description="multi_obj: True, Give each selected object it's own random color. False: Set all objects to one color"
+        )
+    
+    @classmethod
+    def poll(cls, context):
+        return context.mode == "OBJECT" and context.selected_objects
+    
+    def execute(self, context):
+        args = self.as_keywords()
+        generate_random_v_colors_per_obj(context, **args)
+        return {"FINISHED"}  
+
+
+def cleanup_qrm_names_menu_func(self, context):
+    layout = self.layout
+    layout.operator('object.delete_retopo')
+
+
 
 
 classes = (
@@ -789,22 +962,87 @@ classes = (
     OBJECT_OT_RemoveDoubledObjects,
     OBJECT_OT_deselect_parented_objs,
     OBJECT_OT_quick_cloth_pin,
+    OBJECT_OT_toggle_multires,
+    OBJECT_OT_move_wgts_to_collection,
+    OBJECT_OT_clean_up_quadremesh_names,
+    OBJECT_OT_generate_random_v_colors_per_obj,
 )
 
 
 from my_pie_menus import utils
 
 
-kms = []
+kms = [
+    {
+        "keymap_operator": OBJECT_OT_set_auto_smooth_modal.bl_idname,
+        "name": "Object Mode",
+        "letter": "H",
+        "shift": 0,
+        "ctrl": 1,
+        "alt": 1,
+        "space_type": "VIEW_3D",
+        "region_type": "WINDOW",
+        "keywords": {},
+    },
+    {
+        "keymap_operator": OBJECT_OT_align_objects.bl_idname,
+        "name": "Object Mode",
+        "letter": "X",
+        "shift": 0,
+        "ctrl": 0,
+        "alt": 1,
+        "space_type": "VIEW_3D",
+        "region_type": "WINDOW",
+        "keywords": {},
+    },
+    {
+        "keymap_operator": OBJECT_OT_sort_items_on_axis.bl_idname,
+        "name": "Object Mode",
+        "letter": "O",
+        "shift": 1,
+        "ctrl": 0,
+        "alt": 1,
+        "space_type": "VIEW_3D",
+        "region_type": "WINDOW",
+        "keywords": {},
+    },
+]
+
+addon_keymaps = []
 
 
 def register():
 
     utils.register_classes(classes)
-    utils.register_keymaps(kms)
+    utils.register_keymaps(kms, addon_keymaps)
+    bpy.types.VIEW3D_MT_select_object.append(deselect_parented_objs_menu_func)
+    bpy.types.VIEW3D_MT_object.append(hide_widget_objects_menu_func)
+    bpy.types.DATA_PT_modifiers.prepend(deselect_modifier_panel_ops)
+    try:
+        bpy.types.QREMESHER_PT_qremesher.append(cleanup_qrm_names_menu_func)
+    except AttributeError:
+        import importlib.util
+        import sys
+        vers = utils.get_blender_version()
+        if utils.is_linux():
+            path = f"/home/jake/.config/blender/{vers}/scripts/addons/quad_remesher_1_2/__init__.py"
+        else:
+            path = os.path.join(r"C:\Users\Jake\AppData\Roaming\Blender Foundation\Blender", vers, r"scripts\addons\quad_remesher_1_2\__init__.py")
+        importlib.util.spec_from_file_location('quad_remesher_1_2', path)
+        spec = importlib.util.spec_from_file_location('quad_remesher_1_2', path)
+        mod = importlib.util.module_from_spec(spec)
+        sys.modules['quad_remesher_1_2'] = mod
+        spec.loader.exec_module(mod)
+        bpy.utils.register_class(mod.QREMESHER_PT_qremesher)
+        bpy.types.QREMESHER_PT_qremesher.append(cleanup_qrm_names_menu_func)
 
 
 def unregister():
+    bpy.types.VIEW3D_MT_select_object.remove(deselect_parented_objs_menu_func)
+    bpy.types.DATA_PT_modifiers.remove(deselect_modifier_panel_ops)
+    bpy.types.DATA_PT_modifiers.remove(deselect_modifier_panel_ops)
+    bpy.types.QREMESHER_PT_qremesher.remove(cleanup_qrm_names_menu_func)
+    
     for cls in classes:
         bpy.utils.unregister_class(cls)
         utils.unregister_keymaps(kms)

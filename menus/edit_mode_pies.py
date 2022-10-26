@@ -1,5 +1,5 @@
 import bpy
-from bpy.types import Menu
+from bpy.types import Menu, Operator
 import numpy as np
 
 
@@ -61,8 +61,8 @@ class MESH_MT_edge_menu(Menu):
         #
         col = pie.split().column()
         col.operator("mesh.increase_cylinder_res")
+        col.operator("mesh.reduce_cylinder")
         col.operator("mesh.reduce_circle_segments")
-        col.operator("mesh.edge_split")
         #
         # Right
         col = pie.split().column()
@@ -75,6 +75,7 @@ class MESH_MT_edge_menu(Menu):
 
         # Bottom
         col = pie.split().column()
+        col.operator("mesh.edge_split")
         col.operator("mesh.edge_rotate", text="Rotate CW").use_ccw = False
         col.operator("mesh.edge_rotate", text="Rotate CCW").use_ccw = True
 
@@ -115,7 +116,8 @@ class MESH_MT_face_menu(Menu):
         op = col.operator("mesh.poke")
         op = col.operator("mesh.poke_hole_in_faces")
         pie.operator("mesh.solidify")
-        pie.operator("mesh.fill_grid")
+        pie.operator_context = "INVOKE_REGION_WIN"
+        pie.operator("mesh.smart_grid_fill")
 
 
 class MESH_MT_merge_verts_pie(Menu):
@@ -136,19 +138,37 @@ class MESH_MT_merge_verts_pie(Menu):
         op.use_unselected = True
 
 
+class MESH_OT_gstretch_override(Operator):
+    bl_label = "GStretch"
+    bl_idname = "mesh.custom_gstretch"
+    bl_options = {"REGISTER", "UNDO"}
+
+    @classmethod
+    def poll(cls, context):
+        return bpy.types.MESH_OT_looptools_gstretch.poll(context)
+
+    def execute(self, context):
+        bpy.ops.mesh.looptools_gstretch()
+        bpy.ops.remove.annotation()
+        return {"FINISHED"}
+
+
 class MESH_MT_PIE_loop_tools(Menu):
     bl_label = "Loop Tools"
     bl_idname = "MESH_MT_PIE_loop_tools"
     bl_options = {"REGISTER", "UNDO"}
 
+    
+
     def draw(self, context):
         layout = self.layout
+        context.window_manager.looptools.gstretch_use_guide = "Annotation"
         pie = layout.menu_pie()
         op = pie.operator("mesh.looptools_bridge")
         op = pie.operator("mesh.looptools_circle")
         op = pie.operator("mesh.looptools_curve")
         op = pie.operator("mesh.looptools_flatten")
-        op = pie.operator("mesh.looptools_gstretch")
+        op = pie.operator("mesh.custom_gstretch")
         op = pie.operator("mesh.looptools_loft")
         op = pie.operator("mesh.looptools_relax")
         op = pie.operator("mesh.looptools_space")
@@ -186,6 +206,7 @@ class MESH_MT_PIE_cleanup(Menu):
 
 
 classes = (
+    MESH_OT_gstretch_override,
     MESH_MT_PIE_symmetrize,
     MESH_MT_edge_menu,
     MESH_MT_merge_verts_pie,
@@ -232,23 +253,58 @@ kms = [
     {
         "keymap_operator": "wm.call_menu_pie",
         "name": "Mesh",
-        "letter": "E",
-        "shift": True,
-        "ctrl": True,
-        "alt": False,
+        "letter": "F",
+        "shift": 1,
+        "ctrl": 0,
+        "alt": 1,
         "space_type": "VIEW_3D",
         "region_type": "WINDOW",
         "keywords": {"name": "MESH_MT_face_menu"},
+    },
+    {
+        "keymap_operator": "wm.call_menu_pie",
+        "name": "Mesh",
+        "letter": "W",
+        "shift": 1,
+        "ctrl": 0,
+        "alt": 0,
+        "space_type": "VIEW_3D",
+        "region_type": "WINDOW",
+        "keywords": {"name": "MESH_MT_merge_verts_pie"},
+    },
+    {
+        "keymap_operator": "wm.call_menu_pie",
+        "name": "Mesh",
+        "letter": "TWO",
+        "shift": 0,
+        "ctrl": 0,
+        "alt": 1,
+        "space_type": "VIEW_3D",
+        "region_type": "WINDOW",
+        "keywords": {"name": "MESH_MT_PIE_select_by_trait"},
+    },
+    {
+        "keymap_operator": "wm.call_menu_pie",
+        "name": "Mesh",
+        "letter": "THREE",
+        "shift": 0,
+        "ctrl": 0,
+        "alt": 1,
+        "space_type": "VIEW_3D",
+        "region_type": "WINDOW",
+        "keywords": {"name": "MESH_MT_PIE_cleanup"},
     },
 ]
 
 from my_pie_menus import utils
 
+addon_keymaps = []
+
 
 def register():
 
     utils.register_classes(classes)
-    utils.register_keymaps(kms)
+    utils.register_keymaps(kms, addon_keymaps)
 
 
 def unregister():

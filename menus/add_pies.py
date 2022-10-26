@@ -293,9 +293,8 @@ class PIE_MT_AddModifier(Menu):
         box = pie.split().column()
         box.operator('object.custom_bevel_modifier', text="Bevel", icon="MOD_BEVEL")
         box.operator('object.custom_bevel_subsurf_modifier', text="Bevel Subsurf", icon="MOD_SUBSURF")
-        if obj.type == "MESH":
-            op = box.operator('object.modifier_add', text="Weighted Normal", icon="MOD_NORMALEDIT")
-            op.type = "WEIGHTED_NORMAL"
+        op = box.operator('object.auto_crease_subdivide', text="Auto Crease Subdiv", icon="SNAP_EDGE")
+
         # Bottom -- Deform
         box = pie.split().column()
         box.operator("object.custom_simple_deform", text="Bend", icon="MOD_SIMPLEDEFORM")
@@ -377,7 +376,7 @@ classes = (
 kms = [
     {
         "keymap_operator": "wm.call_menu_pie",
-        "name": "3D View",
+        "name": "Object Mode",
         "letter": "A",
         "shift": 1,
         "ctrl": 0,
@@ -388,7 +387,18 @@ kms = [
     },
     {
         "keymap_operator": "wm.call_menu_pie",
-        "name": "3D View",
+        "name": "Object Mode",
+        "letter": "Q",
+        "shift": 1,
+        "ctrl": 1,
+        "alt": 0,
+        "space_type": "VIEW_3D",
+        "region_type": "WINDOW",
+        "keywords": {"name": "PIE_MT_AddModifier"},
+    },
+    {
+        "keymap_operator": "wm.call_menu_pie",
+        "name": "Mesh",
         "letter": "Q",
         "shift": 1,
         "ctrl": 1,
@@ -410,7 +420,7 @@ kms = [
     },
     {
         "keymap_operator": "wm.call_menu_pie",
-        "name": "3D View",
+        "name": "Object Mode",
         "letter": "A",
         "shift": 1,
         "ctrl": 1,
@@ -422,10 +432,12 @@ kms = [
 ]
 from my_pie_menus import utils
 
+addon_keymaps = []
+
 
 def register():
     utils.register_classes(classes)
-    utils.register_keymaps(kms)
+    utils.register_keymaps(kms, addon_keymaps)
 
 
 def unregister():

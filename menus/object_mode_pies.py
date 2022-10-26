@@ -1,5 +1,7 @@
 import bpy
 from bpy.types import Menu
+from my_pie_menus.operators import object_mode_operators as omo
+
 
 
 class PIE_MT_ConvertMeshCurve(Menu):
@@ -296,11 +298,61 @@ class OBJECT_MT_quick_transform_pie(Menu):
         op.transform_amt = val
 
 
+def jake_tools_panel(context, layout):
+    box = layout.box()
+    box.label(text="Texturing Tools")
+    col = box.column(align=True)
+    col.label(text="Assign Random VCol")
+    row = col.row(align=True)
+    op = row.operator(omo.OBJECT_OT_generate_random_v_colors_per_obj.bl_idname, text="Single")
+    op.multi_obj = False
+    op = row.operator(omo.OBJECT_OT_generate_random_v_colors_per_obj.bl_idname, text="Multi Object")
+    op.multi_obj = True
+    col.separator()
+    row = col.row()
+   
+
+    
+    
+
+
+
+class OBJECT_PT_jake_tools_panel(bpy.types.Panel):
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'UI'
+    bl_category = 'Jake Tools'	
+    bl_label = "Jake Tools"
+    bl_idname = "OBJECT_PT_jake_tools_panel"
+    
+    @classmethod
+    def poll(cls, context):
+        return True
+    
+    def draw(self, context):
+        jake_tools_panel(context, self.layout)
+
+class VIEW3D_MT_PIE_toggle_view_transform(Menu):
+    # label is displayed at the center of the pie menu.
+    bl_label = "Toggle View Transform"
+    bl_idname = "VIEW3D_MT_PIE_toggle_view_transform"
+
+    def draw(self, context):
+        layout = self.layout
+
+        pie = layout.menu_pie()
+        # operator_enum will just spread all available options
+        # for the type enum of the operator on the pie
+        pie.prop_enum(context.scene.view_settings, "view_transform", "Filmic")
+        pie.prop_enum(context.scene.view_settings, "view_transform", "False Color")
+
+
 classes = (
     PIE_MT_ConvertMeshCurve,
     OBJECT_MT_object_io_menu,
     PIE_MT_sort_objects,
     OBJECT_MT_quick_transform_pie,
+    VIEW3D_MT_PIE_toggle_view_transform,
+    OBJECT_PT_jake_tools_panel,
 )
 
 kms = [
@@ -318,24 +370,48 @@ kms = [
     {
         "keymap_operator": "wm.call_menu_pie",
         "name": "Object Mode",
-        "letter": "O",
+        "letter": "X",
+        "shift": 0,
+        "ctrl": 1,
+        "alt": 1,
+        "space_type": "VIEW_3D",
+        "region_type": "WINDOW",
+        "keywords": {"name": "PIE_MT_sort_objects"},
+    },
+    {
+        "keymap_operator": "wm.call_menu_pie",
+        "name": "Object Mode",
+        "letter": "V",
+        "shift": 0,
+        "ctrl": 0,
+        "alt": 1,
+        "space_type": "VIEW_3D",
+        "region_type": "WINDOW",
+        "keywords": {"name": "VIEW3D_MT_PIE_toggle_view_transform"},
+    },
+    {
+        "keymap_operator": "wm.call_menu_pie",
+        "name": "Object Mode",
+        "letter": "E",
         "shift": 1,
         "ctrl": 0,
         "alt": 1,
         "space_type": "VIEW_3D",
         "region_type": "WINDOW",
-        "keywords": {"name": "PIE_MT_sort_objects"},
+        "keywords": {"name": "OBJECT_MT_object_io_menu"},
     },
 ]
 
 
 from my_pie_menus import utils
 
+addon_keymaps = []
+
 
 def register():
 
     utils.register_classes(classes)
-    utils.register_keymaps(kms)
+    utils.register_keymaps(kms, addon_keymaps)
 
 
 def unregister():

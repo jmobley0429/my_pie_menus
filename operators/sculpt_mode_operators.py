@@ -169,13 +169,60 @@ classes = [
 
 from my_pie_menus import utils
 
-kms = []
+kms = [
+    {
+        "keymap_operator": BRUSH_OT_toggle_stabilize_stroke.bl_idname,
+        "name": "Sculpt",
+        "letter": "S",
+        "shift": 1,
+        "ctrl": 0,
+        "alt": 1,
+        "space_type": "VIEW_3D",
+        "region_type": "WINDOW",
+        "keywords": {},
+    },
+    {
+        "keymap_operator": BRUSH_OT_adjust_stabilize_radius.bl_idname,
+        "name": "Sculpt",
+        "letter": "F",
+        "shift": 1,
+        "ctrl": 0,
+        "alt": 1,
+        "space_type": "VIEW_3D",
+        "region_type": "WINDOW",
+        "keywords": {},
+    },
+    {
+        "keymap_operator": SCULPT_OT_change_multires_subdiv_level.bl_idname,
+        "name": "Sculpt",
+        "letter": "NUMPAD_PLUS",
+        "shift": 1,
+        "ctrl": 1,
+        "alt": 1,
+        "space_type": "VIEW_3D",
+        "region_type": "WINDOW",
+        "keywords": {"inc_dec": "INCREASE"},
+    },
+    {
+        "keymap_operator": SCULPT_OT_change_multires_subdiv_level.bl_idname,
+        "name": "Sculpt",
+        "letter": "NUMPAD_MINUS",
+        "shift": 1,
+        "ctrl": 1,
+        "alt": 1,
+        "space_type": "VIEW_3D",
+        "region_type": "WINDOW",
+        "keywords": {"inc_dec": "DECREASE"},
+    },
+]
+
+addon_keymaps = []
 
 
 def register():
 
     utils.register_classes(classes)
-    utils.register_keymaps(kms)
+    utils.register_keymaps(kms, addon_keymaps)
 
 
 def unregister():
