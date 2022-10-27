@@ -468,7 +468,9 @@ class CustomShrinkwrap(CustomOperator, Operator):
         sw.show_on_cage = True
         sw.offset = 0.0001
         if self.apply_projection:
-            bpy.ops.object.modifier_apply(modifier=sw.name)
+            for mod in mod.modifiers[:]:
+                if mod.type in {"SUBSURF", "SHRINKWRAP"}:
+                    bpy.ops.object.modifier_apply(modifier=mod.name)
         return {"FINISHED"}
 
 

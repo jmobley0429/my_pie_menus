@@ -140,5 +140,5 @@ def find_layer_collection(collection:bpy.types.Collection, scene="Scene", view_l
         if c.name == collection.name:
             return c
 
-def get_obj_from_coll(coll, type="MESH"):
+def get_objs_from_coll(coll, type="MESH"):
     return [obj for obj in coll.objects if obj.type == type]
