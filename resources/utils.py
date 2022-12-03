@@ -8,9 +8,9 @@ import numpy as np
 import platform
 
 
-
 def is_linux():
     return "linux" in platform.system().lower()
+
 
 def convert_bbox_to_world(bbox, mx):
     num_points = len(bbox)
@@ -64,9 +64,9 @@ def write_mesh_data_to_json(obj, file_name=""):
     with open(file_name, "w") as f:
         json.dump(data, f)
 
+
 def get_blender_version():
     return ".".join(bpy.app.version_string.split('.')[:-1])
-    
 
 
 def register_keymaps(kms, addon_keymaps):
@@ -88,7 +88,8 @@ def register_keymaps(kms, addon_keymaps):
                 # existing_kmis = get_existing_keymap_items(name)
                 km = wm.keyconfigs.addon.keymaps.new(name=name)
                 print(km)
-                kmi = km.keymap_items.new(keymap_operator, letter, 'PRESS', ctrl=ctrl, alt=alt, shift=shift)
+                kmi = km.keymap_items.new(
+                    keymap_operator, letter, 'PRESS', ctrl=ctrl, alt=alt, shift=shift)
                 # str_vers = kmi.to_string()
                 kmi.active = True
                 # for ekmi in existing_kmis:
@@ -118,14 +119,41 @@ def unregister_keymaps(addon_keymaps):
             km.keymap_items.remove(kmi)
     addon_keymaps.clear()
 
-def get_or_create_collection(name:str ) -> bpy.types.Collection:
+
+def get_or_create_collection(name: str) -> bpy.types.Collection:
     '''Attempts to return the collection with a given name, creates one if the collection doesn't exist.'''
     try:
         return bpy.data.collections[name]
     except KeyError:
-        return  bpy.data.collections.new(name) 
-    
-def link_collection(coll:bpy.types.Collection,  scene="Scene"):
+        return bpy.data.collections.new(name)
+
+
+def get_or_create_material(name: str) -> bpy.types.Material:
+    '''Attempts to return the material with a given name, creates one if the material doesn't exist.'''
+    try:
+        return bpy.data.materials[name]
+    except KeyError:
+        return bpy.data.materials.new(name)
+
+
+def get_or_load_image(filepath) -> bpy.types.Image:
+    '''Attempts to return the image with a given name, creates one if the material doesn't exist.'''
+    try:
+        return bpy.data.images[str(filepath)]
+    except KeyError:
+        return bpy.data.images.load(str(filepath))
+
+
+def get_or_create_blender_data_block(attr: str, name: str):
+    '''Attempts to find given data attribute and then return the datablock from that category with given name.'''
+    category = getattr(bpy.data, attr)
+    try:
+        return category[name]
+    except KeyError:
+        return category.new(name)
+
+
+def link_collection(coll: bpy.types.Collection,  scene="Scene"):
     '''Attempts to link collection to scene collection, if collection already linked, will pass.'''
     scene = bpy.data.scenes[scene]
     try:
@@ -133,12 +161,25 @@ def link_collection(coll:bpy.types.Collection,  scene="Scene"):
     except RuntimeError:
         pass
 
-def find_layer_collection(collection:bpy.types.Collection, scene="Scene", view_layer="ViewLayer") -> bpy.types.LayerCollection:
+
+def find_layer_collection(collection: bpy.types.Collection, scene="Scene", view_layer="ViewLayer") -> bpy.types.LayerCollection:
     '''Takes a Collection object and returns the corresponding LayerCollection object from the scene.'''
     scene = bpy.data.scenes[scene]
     for c in scene.view_layers[view_layer].layer_collection.children[:]:
         if c.name == collection.name:
             return c
 
+
 def get_objs_from_coll(coll, type="MESH"):
     return [obj for obj in coll.objects if obj.type == type]
+
+
+def get_mesh_select_string(context):
+    strings = "VERT EDGE FACE".split()
+    active_modes = context.tool_settings.mesh_select_mode[:]
+    modes = []
+    for i, pair in enumerate(zip(strings, active_modes)):
+        string, mode = pair
+        if mode:
+            modes.append(string)
+    return modes

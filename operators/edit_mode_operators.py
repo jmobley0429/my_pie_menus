@@ -1,3 +1,4 @@
+from my_pie_menus import utils
 import bpy
 from bpy.types import Operator
 import bmesh
@@ -39,9 +40,18 @@ class MESH_OT_reduce_circle_segments(CustomOperator, Operator):
         return cls.edit_obj_poll(context)
 
     def execute(self, context):
+        select_vals = context.tool_settings.mesh_select_mode
+        select_modes = "VERT EDGE FACE".split()
+        bpy.ops.mesh.select_mode(
+            use_extend=False, use_expand=False, type='EDGE')
         bpy.ops.mesh.loop_multi_select(ring=False)
         bpy.ops.mesh.select_nth()
         bpy.ops.mesh.merge(type='COLLAPSE')
+        for val, mode in zip(select_vals, select_modes):
+            if val:
+                bpy.ops.mesh.select_mode(
+                    use_extend=True, use_expand=False, type=mode)
+
         return {'FINISHED'}
 
 
@@ -102,7 +112,8 @@ class MESH_OT_quick_tris_to_quads(CustomOperator, Operator):
         return cls.edit_obj_poll(context)
 
     def execute(self, context):
-        bpy.ops.mesh.quads_convert_to_tris(quad_method='BEAUTY', ngon_method='BEAUTY')
+        bpy.ops.mesh.quads_convert_to_tris(
+            quad_method='BEAUTY', ngon_method='BEAUTY')
         bpy.ops.mesh.tris_convert_to_quads()
         return {"FINISHED"}
 
@@ -217,7 +228,8 @@ class MESH_OT_set_boundary_to_weighted(CustomBmeshOperator, Operator):
     def execute(self, context):
         obj = self.get_active_obj()
         stored_edges = [e for e in self.sel_edges]
-        self.select_edges(context, self.bm.edges[:], select=False, skip_callback_func=self.is_boundary_edge)
+        self.select_edges(
+            context, self.bm.edges[:], select=False, skip_callback_func=self.is_boundary_edge)
         verify_weight_layer(self)
         set_edges_weight(self)
         self.bmesh(context)
@@ -278,7 +290,8 @@ class VIEW3D_OT_toggle_annotate(Operator):
 
     def execute(self, context):
         tools = context.workspace.tools
-        curr_tool = tools.from_space_view3d_mode(self.mode, create=False).idname
+        curr_tool = tools.from_space_view3d_mode(
+            self.mode, create=False).idname
         if self.prev_tool is None or curr_tool != "builtin.annotate":
             bpy.ops.wm.tool_set_by_id(name="builtin.annotate")
         else:
@@ -292,7 +305,8 @@ class MESH_OT_poke_hole_in_faces(CustomBmeshOperator, CustomModalOperator, Opera
     bl_label = "Poke Hole in Face"
     bl_options = {'REGISTER', 'UNDO'}
 
-    offset_multiplier: bpy.props.FloatProperty(name="Offset Multiplier", default=0.2)
+    offset_multiplier: bpy.props.FloatProperty(
+        name="Offset Multiplier", default=0.2)
     bridge = False
 
     @classmethod
@@ -307,20 +321,23 @@ class MESH_OT_poke_hole_in_faces(CustomBmeshOperator, CustomModalOperator, Opera
         for face in self.bm.faces[:]:
             face.select_set(False)
         self.bm.select_flush_mode()
-        ret = bmesh.ops.bevel(self.bm, geom=center, offset=self.offset_amt, segments=2)
+        ret = bmesh.ops.bevel(self.bm, geom=center,
+                              offset=self.offset_amt, segments=2)
         verts = ret['verts']
         faces = ret['faces']
         del ret
         bmesh.ops.delete(self.bm, geom=faces, context="FACES")
         self.select_elem_in_list(self.bm.verts[:], verts)
         bmesh.update_edit_mesh(self.mesh)
-        bpy.ops.mesh.select_mode(use_extend=False, use_expand=False, type='VERT')
+        bpy.ops.mesh.select_mode(
+            use_extend=False, use_expand=False, type='VERT')
         bpy.ops.mesh.looptools_circle()
 
     def invoke(self, context, event):
         self.bmesh(context)
         self.sel_faces = [f for f in self.bm.faces[:] if f.select]
-        self.offset_amt = np.mean([f.calc_area() for f in self.sel_faces]) * self.offset_multiplier
+        self.offset_amt = np.mean(
+            [f.calc_area() for f in self.sel_faces]) * self.offset_multiplier
         # self.init_mouse_x = event.mouse_x
         if event.alt:
             self.bridge = True
@@ -402,7 +419,6 @@ def toggle_retopo_visibility(context):
         ol = toggled
 
 
-
 class MESH_toggle_retopo_visibility(Operator):
     bl_idname = "mesh.toggle_retopo_visibility"
     bl_label = "Toggle Retopo View"
@@ -431,19 +447,22 @@ def has_sel_faces(context):
     del bm
     return sel_faces
 
+
 def get_selected(mesh, elem_type):
     return [elem for elem in getattr(mesh, elem_type)[:] if elem.select]
+
 
 def get_face_edges(bm, face):
     edges = [edge.index for edge in face.edges[:]]
     ret = [edge for edge in bm.edges[:] if edge.index in edges]
     return ret
 
+
 def dissolve_faces(bm, faces):
-    
+
     return ret["faces"]
 
-        
+
 def smart_grid_fill(context, args):
     span = args.pop('span')
     offset = args.pop('offset')
@@ -452,8 +471,8 @@ def smart_grid_fill(context, args):
     sel_faces = get_selected(bm, "faces")
     if sel_faces:
         if len(sel_faces) > 1:
-            ret = bmesh.ops.dissolve_faces(bm, faces=sel_faces)  
-            face = ret["region"][0]   
+            ret = bmesh.ops.dissolve_faces(bm, faces=sel_faces)
+            face = ret["region"][0]
         else:
             face = sel_faces[0]
         face_edges = get_face_edges(bm, face)
@@ -463,6 +482,7 @@ def smart_grid_fill(context, args):
         bm.select_flush(True)
         bmesh.update_edit_mesh(obj.data)
     bpy.ops.mesh.fill_grid("INVOKE_DEFAULT", span=span, offset=offset)
+
 
 class MESH_OT_smart_grid_fill(Operator):
     bl_idname = "mesh.smart_grid_fill"
@@ -480,6 +500,37 @@ class MESH_OT_smart_grid_fill(Operator):
         args = self.as_keywords()
         smart_grid_fill(context, args)
         return {"FINISHED"}
+
+
+def toggle_retopo_overlays(context):
+    obj = context.object
+    overlay_attrs = ["show_in_front", "show_wire", "show_all_edges"]
+    overlay_vals = [getattr(obj, attr) for attr in overlay_attrs]
+    is_retopo_view = any(overlay_vals)
+    toggle_val = not is_retopo_view
+    for attr in overlay_attrs:
+        setattr(obj, attr, toggle_val)
+    context.space_data.shading.light = 'MATCAP'
+    context.space_data.shading.color_type = 'OBJECT'
+    if toggle_val:
+        obj.color = [0.000000, 0.650000, 1.000000, 0.500000]
+    else:
+        obj.color = [1.000000, 1.000000, 1.000000, 1.000000]
+
+
+class MESH_OT_toggle_retopo_overlays(Operator):
+    bl_idname = "mesh.toggle_retopo_overlays"
+    bl_label = "Toggle Retopo Views"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    @classmethod
+    def poll(cls, context):
+        return context.active_object is not None
+
+    def execute(self, context):
+        toggle_retopo_overlays(context)
+        return {"FINISHED"}
+
 
 def origin_to_bot_left_menu_func(self, context):
     layout = self.layout
@@ -504,7 +555,8 @@ classes = (
     ToggleAnnotateProps,
     MESH_OT_smart_join_verts,
     MESH_toggle_retopo_visibility,
-    MESH_OT_smart_grid_fill
+    MESH_OT_smart_grid_fill,
+    MESH_OT_toggle_retopo_overlays
 )
 
 kms = [
@@ -533,9 +585,6 @@ kms = [
 ]
 
 
-from my_pie_menus import utils
-
-
 kms = []
 
 addon_keymaps = []
@@ -544,7 +593,8 @@ addon_keymaps = []
 def register():
     utils.register_classes(classes)
     utils.register_keymaps(kms, addon_keymaps)
-    bpy.types.WindowManager.ToggleAnnotateProps = bpy.props.PointerProperty(type=ToggleAnnotateProps)
+    bpy.types.WindowManager.ToggleAnnotateProps = bpy.props.PointerProperty(
+        type=ToggleAnnotateProps)
 
 
 def unregister():

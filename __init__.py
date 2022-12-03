@@ -73,7 +73,8 @@ modules = [
 
 menu_funcs = [
     (bpy.types.DATA_PT_modifiers, "prepend", modifier_operators.menu_func),
-    (bpy.types.VIEW3D_MT_select_object, "append", object_mode_operators.deselect_parented_objs_menu_func),
+    (bpy.types.VIEW3D_MT_select_object, "append",
+     object_mode_operators.deselect_parented_objs_menu_func),
 ]
 
 
@@ -82,6 +83,7 @@ addon_keymaps = []
 
 
 def register():
+
     for module in modules:
         print(f"registering {module.__name__}")
         module.register()
@@ -89,9 +91,15 @@ def register():
 
 def unregister():
     for module in modules:
-        
+
         module.unregister()
 
 
 if __name__ == "__main__":
+    bpy.ops.preferences.addon_enable(module="space_view3d_align_tools")
+    bpy.ops.preferences.addon_enable(module="add_mesh_extra_objects")
+    bpy.ops.preferences.addon_enable(module="add_curve_extra_objects")
+    bpy.ops.preferences.addon_enable(module="mesh_looptools")
+    bpy.ops.preferences.addon_enable(module="node_wrangler")
+    bpy.ops.preferences.addon_enable(module="io_import_images_as_planes")
     register()

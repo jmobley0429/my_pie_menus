@@ -1,3 +1,4 @@
+from my_pie_menus import utils
 import bpy
 from bpy.types import Menu
 
@@ -70,7 +71,13 @@ class PIE_MT_UVUnwrapPie(Menu):
         props = context.scene.uvp2_props
         pie = layout.menu_pie()
         # L
-        pie.operator("uvpackmaster2.uv_pack", text="Pack")
+        col = pie.column()
+        row = col.row()
+        row.prop(props, "heuristic_enable")
+        row = col.row()
+        row.operator("uvpackmaster2.uv_pack", text="Pack")
+        row = col.row()
+        row.prop(props, "heuristic_search_time")
         # R
         pie.operator("uv.textools_rectify")
         # B
@@ -93,7 +100,8 @@ class PIE_MT_UVUnwrapPie(Menu):
         col.label(text="Add to Lock Groups")
         col.scale_x = 1
         spl = col.split()
-        spl.operator("uvpackmaster2.set_free_island_lock_group", text="Current")
+        spl.operator("uvpackmaster2.set_free_island_lock_group",
+                     text="Current")
         spl.operator("uvpackmaster2.set_island_lock_group", text="Free")
         spl = col.split()
         spl.prop(props, "lock_groups_enable", text="Enable")
@@ -123,9 +131,6 @@ classes = (
     PIE_MT_UVUnwrapPie,
     IMAGE_MT_uvs_snap_pie_custom,
 )
-
-
-from my_pie_menus import utils
 
 
 kms = [

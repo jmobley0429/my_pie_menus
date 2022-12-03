@@ -1,7 +1,7 @@
+from my_pie_menus import utils
 import bpy
 from bpy.types import Menu
 from my_pie_menus.operators import object_mode_operators as omo
-
 
 
 class PIE_MT_ConvertMeshCurve(Menu):
@@ -304,32 +304,30 @@ def jake_tools_panel(context, layout):
     col = box.column(align=True)
     col.label(text="Assign Random VCol")
     row = col.row(align=True)
-    op = row.operator(omo.OBJECT_OT_generate_random_v_colors_per_obj.bl_idname, text="Single")
+    op = row.operator(
+        omo.OBJECT_OT_generate_random_v_colors_per_obj.bl_idname, text="Single")
     op.multi_obj = False
-    op = row.operator(omo.OBJECT_OT_generate_random_v_colors_per_obj.bl_idname, text="Multi Object")
+    op = row.operator(
+        omo.OBJECT_OT_generate_random_v_colors_per_obj.bl_idname, text="Multi Object")
     op.multi_obj = True
     col.separator()
     row = col.row()
-   
-
-    
-    
-
 
 
 class OBJECT_PT_jake_tools_panel(bpy.types.Panel):
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
-    bl_category = 'Jake Tools'	
+    bl_category = 'Jake Tools'
     bl_label = "Jake Tools"
     bl_idname = "OBJECT_PT_jake_tools_panel"
-    
+
     @classmethod
     def poll(cls, context):
         return True
-    
+
     def draw(self, context):
         jake_tools_panel(context, self.layout)
+
 
 class VIEW3D_MT_PIE_toggle_view_transform(Menu):
     # label is displayed at the center of the pie menu.
@@ -343,7 +341,8 @@ class VIEW3D_MT_PIE_toggle_view_transform(Menu):
         # operator_enum will just spread all available options
         # for the type enum of the operator on the pie
         pie.prop_enum(context.scene.view_settings, "view_transform", "Filmic")
-        pie.prop_enum(context.scene.view_settings, "view_transform", "False Color")
+        pie.prop_enum(context.scene.view_settings,
+                      "view_transform", "False Color")
 
 
 classes = (
@@ -402,8 +401,6 @@ kms = [
     },
 ]
 
-
-from my_pie_menus import utils
 
 addon_keymaps = []
 
