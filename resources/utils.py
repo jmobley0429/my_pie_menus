@@ -2,7 +2,7 @@ import bpy
 import bmesh
 import math
 import json
-from mathutils import Euler
+from mathutils import Euler, Quaternion, Vector, Matrix
 from collections import defaultdict
 import numpy as np
 import platform
@@ -23,6 +23,12 @@ def get_bbox_center(obj, matrix_world):
     bounds = np.array([v[:] for v in obj.bound_box])
     ws_bbox = convert_bbox_to_world(bounds, matrix_world)
     return ws_bbox.sum(0) / len(bounds)
+
+def get_bmesh(obj):
+    mesh = obj.data
+    bm = bmesh.new()
+    bm.from_mesh(mesh)
+    return bm
 
 
 def get_active_obj():
@@ -87,7 +93,6 @@ def register_keymaps(kms, addon_keymaps):
             if kc:
                 # existing_kmis = get_existing_keymap_items(name)
                 km = wm.keyconfigs.addon.keymaps.new(name=name)
-                print(km)
                 kmi = km.keymap_items.new(
                     keymap_operator, letter, 'PRESS', ctrl=ctrl, alt=alt, shift=shift)
                 # str_vers = kmi.to_string()
@@ -103,7 +108,6 @@ def register_keymaps(kms, addon_keymaps):
 
 def register_classes(classes):
     for cls in classes:
-        print(cls)
         try:
             bpy.utils.register_class(cls)
         except ValueError:
@@ -112,12 +116,15 @@ def register_classes(classes):
 
 
 def unregister_keymaps(addon_keymaps):
-    wm = bpy.context.window_manager
-    kc = wm.keyconfigs.addon
-    if kc:
-        for km, kmi in addon_keymaps:
-            km.keymap_items.remove(kmi)
-    addon_keymaps.clear()
+    try:
+        wm = bpy.context.window_manager
+        kc = wm.keyconfigs.addon
+        if kc:
+            for km, kmi in addon_keymaps:
+                km.keymap_items.remove(kmi)
+        addon_keymaps.clear()
+    except:
+        pass
 
 
 def get_or_create_collection(name: str) -> bpy.types.Collection:
@@ -183,3 +190,42 @@ def get_mesh_select_string(context):
         if mode:
             modes.append(string)
     return modes
+
+
+def copy_with_location(obj, copy_name, link_collection):
+    obj_loc = obj.matrix_world.translation.copy()
+    obj_mesh = obj.data.copy()
+    copy_obj = bpy.data.objects.new(copy_name, obj_mesh)
+    link_collection.objects.link(copy_obj)
+    copy_obj.matrix_world.translation = obj_loc
+    print(f"Copied Obj Location: {copy_obj.location}")
+    return copy_obj
+
+def clear_parent_keep_transform(obj):
+    obj_loc = obj.matrix_world.translation.copy()
+    obj.parent = None
+    obj.matrix_world.translation = obj_loc
+
+def set_parent_keep_transform(obj, parent):
+    if obj != parent:
+        obj_loc = obj.matrix_world.translation.copy()
+        obj.parent = parent
+        obj.matrix_world.translation = obj_loc
+
+def find_objects_collection(obj) -> bpy.types.Collection :
+    for col in bpy.data.collections[:]:
+        if obj in col.all_objects[:]:
+            return col
+
+def transfer_obj_to_coll(obj, to_coll, from_coll):
+    to_coll.objects.link(obj)
+    try:
+        from_coll.objects.unlink(obj)
+    except RuntimeError:
+        from_coll = find_objects_collection(obj)
+        from_coll.objects.unlink(obj)
+
+def set_selected_and_active(context, obj=None, selected=True):
+    context.view_layer.objects.active = obj 
+    if obj:
+        obj.select_set(selected)

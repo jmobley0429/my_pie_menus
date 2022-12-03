@@ -1,6 +1,7 @@
 import bpy
 from bpy.types import Menu, Operator
 import numpy as np
+from ..operators.edit_mode_operators import *
 
 
 class MESH_MT_PIE_symmetrize(Menu):
@@ -45,6 +46,8 @@ class MESH_MT_edge_menu(Menu):
         col.operator("mesh.loop_multi_select", text="Edge Rings").ring = True
         col.operator("mesh.loop_multi_select", text="Edge Loops").ring = False
         col.operator("mesh.select_nth")
+        row = col.row(align=True)
+        row.operator("mesh.subdivide_inner_edges")
         # Top select sharp, regions etc.
         bx = pie.split().box()
         bx.label(text="Select")
@@ -75,9 +78,14 @@ class MESH_MT_edge_menu(Menu):
 
         # Bottom
         col = pie.split().column()
-        col.operator("mesh.edge_split")
-        col.operator("mesh.edge_rotate", text="Rotate CW").use_ccw = False
-        col.operator("mesh.edge_rotate", text="Rotate CCW").use_ccw = True
+        col.ui_units_x += 5 
+        row = col.row(align=True)
+        row.operator("mesh.edge_split")
+        row = col.row(align=True)
+        row.operator("mesh.edge_rotate", text="Rotate CW").use_ccw = False
+        row = col.row(align=True)
+        row.operator("mesh.edge_rotate", text="Rotate CCW").use_ccw = True
+       
 
 
 class MESH_MT_face_menu(Menu):
@@ -186,6 +194,10 @@ class MESH_MT_PIE_select_by_trait(Menu):
         pie.operator("mesh.select_interior_faces")
         pie.operator("mesh.select_loose")
         pie.operator("mesh.select_non_manifold")
+        pie.operator(MESH_OT_cleanup_select_ngons.bl_idname)
+        pie.operator(MESH_OT_cleanup_select_short_edges.bl_idname)
+        pie.operator(MESH_OT_cleanup_select_small_faces.bl_idname)
+        pie.operator(MESH_OT_cleanup_handle_ngons.bl_idname)
 
 
 class MESH_MT_PIE_cleanup(Menu):

@@ -10,14 +10,14 @@ from collections import defaultdict
 from pathlib import Path
 from bpy.types import Operator
 
-from my_pie_menus.resources import utils
+import utils
 
 from .custom_operator import (
     CustomOperator,
     CustomModalOperator,
     CustomBmeshOperator,
 )
-from my_pie_menus.resources import utils
+import utils
 
 
 class AddCameraCustom(Operator):

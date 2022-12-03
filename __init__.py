@@ -35,7 +35,7 @@ if "bpy" in locals():
 
 else:
     import bpy
-    from my_pie_menus.resources import utils
+    import utils
 
     from my_pie_menus.operators import custom_operator
     from my_pie_menus.operators import modifier_operators
@@ -46,7 +46,6 @@ else:
     from my_pie_menus.operators import sculpt_mode_operators
     from my_pie_menus.operators import uv_operators
     from my_pie_menus.operators import weight_paint_operators
-
     from my_pie_menus.menus import add_pies
     from my_pie_menus.menus import edit_mode_pies
     from my_pie_menus.menus import object_mode_pies

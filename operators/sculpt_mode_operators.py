@@ -3,7 +3,7 @@ from bpy.types import Operator
 import json
 from pathlib import Path
 from .custom_operator import CustomModalOperator, CustomOperator
-from my_pie_menus.resources import utils
+import utils
 
 ROOT = Path(__file__).parent.parent.resolve()
 custom_shape_fp = ROOT.joinpath('resources', 'gizmo_circle_mesh.json')

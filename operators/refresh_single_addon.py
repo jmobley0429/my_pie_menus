@@ -9,7 +9,7 @@ bl_info = {
 }
 
 import bpy
-from my_pie_menus.resources import utils
+import utils
 import os 
 
 os.path.join(

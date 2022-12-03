@@ -1,4 +1,4 @@
-from my_pie_menus import utils
+import utils
 import bpy
 from bpy.types import Operator
 import bmesh
@@ -9,6 +9,7 @@ from .custom_operator import (
     CustomModalOperator,
     CustomBmeshOperator,
 )
+from ..resources import bmesh_utils as bmu
 
 
 class MESH_OT_reduce_cylinder(CustomOperator, Operator):
@@ -538,6 +539,205 @@ def origin_to_bot_left_menu_func(self, context):
     op = pie.operator('mesh.origin_to_bottom_left')
 
 
+class CleanupMesh:
+
+    def __init__(self, context, args, op=None):
+        if op is not None:
+            self.op = op
+        self._set_args(args)
+        self.context = context
+        self.obj = context.edit_object
+        self.mesh = self.obj.data
+        self.bm = bmesh.from_edit_mesh(self.mesh)
+        
+    @property
+    def _select_state_from_mode(self):
+        modes = "VERT EDGE FACE".split()
+        bm_modes=  []
+        for mode in modes:
+            if mode in self.bm.select_mode:
+                bm_modes.append(True)
+            else:
+                bm_modes.append(False)
+        return tuple(bm_modes)
+
+
+    def _set_args(self, args):
+        if args:
+            for key, value in args.items():
+                setattr(self, key, value)
+
+    def _finish_op(self):
+        self.context.tool_settings.mesh_select_mode = self._select_state_from_mode
+        self.bm.select_flush_mode()
+        bmesh.update_edit_mesh(self.mesh)
+
+    def select_short_edges(self, ):
+        self.selected = 0
+        for e in self.bm.edges[:]:
+            e.select_set(False)
+            length = e.calc_length()
+            if length < self.edge_threshold:
+                e.select_set(True)
+                self.selected += 1
+        self.bm.select_mode = {"EDGE"}
+        self._finish_op()
+        if not self.selected:
+            self.op.report({"INFO"}, "No short edges found!")
+        return {"FINISHED"}
+        
+    def select_small_faces(self, ):
+        self.selected = 0
+        for face in self.bm.faces[:]:
+            face.select_set(False)
+            area = face.calc_area()
+            if area < self.face_threshold:
+                face.select_set(True)
+                self.selected += 1
+        self.bm.select_mode = {"FACE"}
+        self._finish_op()
+        if not self.selected:
+            self.op.report({"INFO"}, "No small faces found!")
+        return {"FINISHED"}
+
+    def select_ngons(self):
+        self.selected = 0
+        for face in self.bm.faces:
+            if len(face.edges[:]) > 4:
+                face.select_set(True)
+                self.selected += 1
+            else:
+                face.select_set(False)
+        self.bm.select_mode = {"FACE"}
+        self._finish_op() 
+        if not self.selected:
+            self.op.report({"INFO"}, "No ngons found!")
+        return {"FINISHED"}
+            
+
+    def cleanup_ngons(self):
+        self.select_ngons()
+        if self.selected:
+            bpy.ops.mesh.quick_tris_to_quads()
+            bpy.ops.mesh.select_all(action="DESELECT")
+        return {"FINISHED"}
+
+class MESH_OT_cleanup_select_ngons(CustomOperator, bpy.types.Operator):
+    bl_idname = "mesh.cleanup_select_ngons"
+    bl_label = "Select Ngons"
+    bl_options = {"REGISTER", "UNDO"}
+
+    ngon_side_count: bpy.props.IntProperty(name='Ng     return {"FINISHED"}on Side Count', default=5)
+
+    @classmethod
+    def poll(cls, context):
+        return cls.edit_obj_poll(context)
+
+    def invoke(self, context, event):
+        self.args = self.as_keywords()
+        return self.execute(context)
+
+
+    def execute(self, context):
+        cleaner = CleanupMesh(context, self.args, op=self)
+        return cleaner.select_ngons()
+
+
+class MESH_OT_cleanup_select_small_faces(CustomOperator, bpy.types.Operator):
+    bl_idname = "mesh.cleanup_select_small_faces"
+    bl_label = "Select Small Faces"
+
+    face_threshold: bpy.props.FloatProperty(
+        name='Face Threshold', default=.0001)
+
+    @classmethod
+    def poll(cls, context):
+        return cls.edit_obj_poll(context)
+
+    def invoke(self, context, event):
+        self.args = self.as_keywords()
+        return self.execute(context)
+
+    def execute(self, context):
+        cleaner = CleanupMesh(context, self.args, op=self)
+        return cleaner.select_small_faces()
+        
+
+
+class MESH_OT_cleanup_select_short_edges(CustomOperator, bpy.types.Operator):
+    bl_idname = "mesh.cleanup_select_short_edges"
+    bl_label = "Select Short Edges"
+
+    edge_threshold: bpy.props.FloatProperty(
+        name='Edge Threshold', default=.001)
+
+    @classmethod
+    def poll(cls, context):
+        return cls.edit_obj_poll(context)
+
+    def invoke(self, context, event):
+        self.args = self.as_keywords()
+        return self.execute(context)
+
+    def execute(self, context):
+        cleaner = CleanupMesh(context, self.args, op=self)
+        return cleaner.select_short_edges()
+        
+
+
+class MESH_OT_cleanup_handle_ngons(CustomOperator, bpy.types.Operator):
+    bl_idname = "mesh.cleanup_handle_ngons"
+    bl_label = "Cleanup Ngons"
+
+    @classmethod
+    def poll(cls, context):
+        return cls.edit_obj_poll(context)
+
+    def invoke(self, context, event):
+        self.args = self.as_keywords()
+        return self.execute(context)
+
+    def execute(self, context):
+        cleaner = CleanupMesh(context, self.args, op=self)
+        return cleaner.cleanup_ngons()
+        
+
+
+def subdivide_inner_edges(context):
+    obj = context.edit_object
+    mesh = obj.data
+    bm = bmesh.from_edit_mesh(mesh)
+    sel_edges = bmu.get_sel_edges(bm)
+    subdiv_edges = []
+
+    for edge in sel_edges:
+        edge.select_set(False)
+        if bmu.is_interior(edge) or edge.is_boundary:
+            subdiv_edges.append(edge)
+
+    ret = bmesh.ops.subdivide_edges(bm, edges=subdiv_edges, cuts=1)
+    for geo in ret['geom_inner']:
+        if isinstance(geo, bmesh.types.BMEdge):
+            geo.select_set(True)
+    bm.select_flush(True)
+    bmesh.update_edit_mesh(mesh)
+    bm.free()
+    del bm
+
+
+class MESH_OT_subdivide_inner_edges(CustomOperator, bpy.types.Operator):
+    bl_idname = "mesh.subdivide_inner_edges"
+    bl_label = "Subdivide Inner Edges"
+
+    @classmethod
+    def poll(cls, context):
+        return cls.edit_obj_poll(context)
+
+    def execute(self, context):
+        subdivide_inner_edges(context)
+        return {"FINISHED"}
+
+
 classes = (
     MESH_OT_reduce_cylinder,
     MESH_OT_reduce_circle_segments,
@@ -556,7 +756,12 @@ classes = (
     MESH_OT_smart_join_verts,
     MESH_toggle_retopo_visibility,
     MESH_OT_smart_grid_fill,
-    MESH_OT_toggle_retopo_overlays
+    MESH_OT_toggle_retopo_overlays,
+    MESH_OT_cleanup_select_short_edges,
+    MESH_OT_cleanup_select_small_faces,
+    MESH_OT_cleanup_select_ngons,
+    MESH_OT_cleanup_handle_ngons,
+    MESH_OT_subdivide_inner_edges,
 )
 
 kms = [
@@ -602,3 +807,5 @@ def unregister():
         bpy.utils.unregister_class(cls)
         utils.unregister_keymaps(kms)
     del bpy.types.WindowManager.ToggleAnnotateProps
+
+

@@ -7,7 +7,7 @@ from bpy.types import Operator
 import bmesh
 from mathutils import Vector
 from .custom_operator import CustomOperator, CustomModalOperator, ModalDrawText
-from my_pie_menus.resources import utils
+import utils
 
 
 class CustomAddMirrorModifier(CustomOperator, Operator):
@@ -49,7 +49,7 @@ class CustomAddMirrorModifier(CustomOperator, Operator):
                 mirror_mod.use_bisect_axis[i] = False
             mirror_mod.use_axis[axis_index] = True
             mirror_mod.use_bisect_axis[axis_index] = True
-            mirror_mod.use_mirror_u = True
+            # mirror_mod.use_mirror_u = True
             mirror_mod.use_clip = True
             if self.multi_object:
                 mirror_mod.mirror_object = self.mirror_obj

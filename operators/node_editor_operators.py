@@ -3,8 +3,8 @@ import numpy as np
 from mathutils import Vector
 
 
-class NODE_OT_node_align(bpy.types.Operator):
-    bl_idname = "node.align"
+class NODE_OT_directional_node_align(bpy.types.Operator):
+    bl_idname = "node.directional_align"
     bl_label = "Align Nodes"
     bl_options = {'REGISTER', 'UNDO'}
 
@@ -101,13 +101,13 @@ class NODE_OT_node_average_distance(bpy.types.Operator):
 
 # Register and add to the "object" menu (required to also use F3 search "Simple Object Operator" for quick access).
 classes = [
-    NODE_OT_node_align,
+    NODE_OT_directional_node_align,
     NODE_OT_node_average_distance,
 ]
 
 kms = [
     {
-        "keymap_operator": "node.align",
+        "keymap_operator": "node.directional_align",
         "name": "Node Editor",
         "letter": "W",
         "shift": 1,
@@ -118,7 +118,7 @@ kms = [
         "keywords": {"direction": "TOP"},
     },
     {
-        "keymap_operator": "node.align",
+        "keymap_operator": "node.directional_align",
         "name": "Node Editor",
         "letter": "S",
         "shift": 1,
@@ -129,7 +129,7 @@ kms = [
         "keywords": {"direction": "BOTTOM"},
     },
     {
-        "keymap_operator": "node.align",
+        "keymap_operator": "node.directional_align",
         "name": "Node Editor",
         "letter": "D",
         "shift": 1,
@@ -140,7 +140,7 @@ kms = [
         "keywords": {"direction": "RIGHT"},
     },
     {
-        "keymap_operator": "node.align",
+        "keymap_operator": "node.directional_align",
         "name": "Node Editor",
         "letter": "A",
         "shift": 1,

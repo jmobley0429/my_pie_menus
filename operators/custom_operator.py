@@ -29,7 +29,14 @@ class CustomOperator:
 
     @staticmethod
     def edit_obj_poll(context):
-        return "EDIT" in context.mode and context.active_object is not None
+        if "EDIT" not in context.mode:
+            return False
+        if context.active_object is None:
+            return False
+        if context.active_object.type != "MESH":
+            return False
+        return True
+      
 
     def to_mode(self, mode):
         bpy.ops.object.mode_set(mode=mode)

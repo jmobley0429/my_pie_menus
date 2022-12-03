@@ -2,6 +2,7 @@ from my_pie_menus import utils
 import bpy
 from bpy.types import Menu
 from my_pie_menus.operators import object_mode_operators as omo
+from my_pie_menus.operators.edit_mode_operators import *
 
 
 class PIE_MT_ConvertMeshCurve(Menu):
@@ -299,7 +300,8 @@ class OBJECT_MT_quick_transform_pie(Menu):
 
 
 def jake_tools_panel(context, layout):
-    box = layout.box()
+    col = layout.column(align=True)
+    box = col.box()
     box.label(text="Texturing Tools")
     col = box.column(align=True)
     col.label(text="Assign Random VCol")
@@ -310,8 +312,20 @@ def jake_tools_panel(context, layout):
     op = row.operator(
         omo.OBJECT_OT_generate_random_v_colors_per_obj.bl_idname, text="Multi Object")
     op.multi_obj = True
-    col.separator()
+    col = layout.column(align=True)
+    box = col.box()
+    box.label(text="Mesh Cleanup Tools")
+    col = box.column(align=True)
     row = col.row()
+    row.operator(MESH_OT_cleanup_select_short_edges.bl_idname)
+    row = col.row()
+    row.operator(MESH_OT_cleanup_select_small_faces.bl_idname)
+    row = col.row()
+    row.operator(MESH_OT_cleanup_select_ngons.bl_idname)
+    row = col.row()
+    row.operator(MESH_OT_cleanup_handle_ngons.bl_idname)
+
+
 
 
 class OBJECT_PT_jake_tools_panel(bpy.types.Panel):
@@ -343,6 +357,7 @@ class VIEW3D_MT_PIE_toggle_view_transform(Menu):
         pie.prop_enum(context.scene.view_settings, "view_transform", "Filmic")
         pie.prop_enum(context.scene.view_settings,
                       "view_transform", "False Color")
+
 
 
 classes = (
