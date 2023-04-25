@@ -1,4 +1,5 @@
 import utils
+from my_pie_menus.resources import bmesh_utils
 import bpy
 from bpy.types import Operator
 import bmesh
@@ -8,6 +9,7 @@ from .custom_operator import (
     CustomOperator,
     CustomModalOperator,
     CustomBmeshOperator,
+    EditModeOperatorBaseClass,
 )
 from ..resources import bmesh_utils as bmu
 
@@ -118,29 +120,77 @@ class MESH_OT_quick_tris_to_quads(CustomOperator, Operator):
         bpy.ops.mesh.tris_convert_to_quads()
         return {"FINISHED"}
 
+class EdgeWeightSetter(CustomBmeshOperator):
+    clear = None
 
-def verify_weight_layer(self):
-    if self.weight_type == "BEVEL":
-        self.weight_layer = self.bm.edges.layers.bevel_weight.verify()
-    elif self.weight_type == "CREASE":
-        self.weight_layer = self.bm.edges.layers.crease.verify()
+    def __init__(self, context, args):
+        self._set_args(args)
+        self.bmesh(context)
+        self.context = context
+
+    @property
+    def sharp_angle(self):
+        return np.radians(self.sharpness)
+
+    def _set_args(self, args):
+        for key, val in args.items():
+            setattr(self, key, val)
+
+    def _set_clear(self, event):
+        if event.alt:
+            self.clear = True
+        elif event.ctrl:
+            self.clear = False    
 
 
-def set_edge_weight(self, edge):
-    if self.clear is not None:
-        val = self.clear
-    else:
-        val = not edge[self.weight_layer]
-    edge[self.weight_layer] = float(val)
+    def verify_weight_layer(self):
+        if self.weight_type == "BEVEL":
+            self.weight_layer = self.bm.edges.layers.bevel_weight.verify()
+        elif self.weight_type == "CREASE":
+            self.weight_layer = self.bm.edges.layers.crease.verify()
 
 
-def set_edges_weight(self):
-    for edge in self.sel_edges:
-        try:
-            set_edge_weight(self, edge)
-        except ReferenceError:
-            self.bmesh(context)
-            set_edges_weight(self)
+    def set_edge_weight(self, edge):
+        if self.clear is not None:
+            val = self.clear
+        else:
+            val = not edge[self.weight_layer]
+        edge[self.weight_layer] = float(val)
+
+
+    def set_edges_weight(self):
+        for edge in self.sel_edges:
+            try:
+                self.set_edge_weight(edge)
+            except ReferenceError:
+                self.bmesh(self.context)
+                self.set_edges_weight(self)
+
+    
+    def set_sharp_to_weighted(self):
+        obj = self.get_active_obj()
+        stored_edges = [e for e in self.sel_edges]
+        self.select_edges(self.context, self.bm.edges[:], select=False)
+        self.select_sharp_edges(threshold=self.sharp_angle)
+        self.verify_weight_layer()
+        self.set_edges_weight()
+        if stored_edges:
+            self.select_edges(self.context, self.bm.edges[:], select=False)
+            self.select_edges(self.context, stored_edges, select=True)
+        bmesh.update_edit_mesh(self.context.edit_object.data)
+
+    def set_boundary_to_weighted(self):
+        obj = self.get_active_obj()
+        stored_edges = [e for e in self.sel_edges]
+        self.select_edges(
+            self.context, self.bm.edges[:], select=False, skip_callback_func=self.is_boundary_edge)
+        self.verify_weight_layer()
+        self.set_edges_weight()
+        self.bmesh(self.context)
+        if stored_edges:
+            self.select_edges(self.context, self.bm.edges[:], select=False)
+            self.select_edges(self.context, stored_edges, select=True)
+        bmesh.update_edit_mesh(self.context.edit_object.data)
 
 
 class MESH_OT_toggle_edge_weight(CustomBmeshOperator, Operator):
@@ -156,23 +206,22 @@ class MESH_OT_toggle_edge_weight(CustomBmeshOperator, Operator):
     bl_options = {'REGISTER', 'UNDO'}
 
     weight_type: bpy.props.StringProperty(name='Weight Type')
-    clear = None
+    
 
     @classmethod
     def poll(cls, context):
         return cls.edit_obj_poll(context)
 
     def invoke(self, context, event):
-        if event.alt:
-            self.clear = True
-        elif event.ctrl:
-            self.clear = False
-        self.bmesh(context)
+        args = self.as_keywords()
+        self.edge_weight_setter = EdgeWeightSetter(context, args)
+        self.edge_weight_setter._set_clear(event)
         return self.execute(context)
 
     def execute(self, context):
-        verify_weight_layer(self)
-        set_edges_weight(self)
+        ews = self.edge_weight_setter
+        ews.verify_weight_layer()
+        ews.set_edges_weight()
         bmesh.update_edit_mesh(context.edit_object.data)
         return {"FINISHED"}
 
@@ -185,29 +234,18 @@ class MESH_OT_set_sharp_to_weighted(CustomBmeshOperator, Operator):
     weight_type: bpy.props.StringProperty(name="Weight Type", default="BEVEL")
     sharpness: bpy.props.IntProperty(name="Sharpness", default=30)
 
-    @property
-    def sharp_angle(self):
-        return np.radians(self.sharpness)
-
     @classmethod
     def poll(cls, context):
         return cls.edit_obj_poll(context)
 
     def invoke(self, context, event):
-        self.bmesh(context)
+        
         return self.execute(context)
 
     def execute(self, context):
-        obj = self.get_active_obj()
-        stored_edges = [e for e in self.sel_edges]
-        self.select_edges(context, self.bm.edges[:], select=False)
-        self.select_sharp_edges(threshold=self.sharp_angle)
-        verify_weight_layer(self)
-        set_edges_weight(self)
-        if stored_edges:
-            self.select_edges(context, self.bm.edges[:], select=False)
-            self.select_edges(context, stored_edges, select=True)
-        bmesh.update_edit_mesh(context.edit_object.data)
+        args = self.as_keywords()
+        ews = EdgeWeightSetter(context, args)
+        ews.set_sharp_to_weighted()
         return {"FINISHED"}
 
 
@@ -222,22 +260,9 @@ class MESH_OT_set_boundary_to_weighted(CustomBmeshOperator, Operator):
     def poll(cls, context):
         return cls.edit_obj_poll(context)
 
-    def invoke(self, context, event):
-        self.bmesh(context)
-        return self.execute(context)
-
     def execute(self, context):
-        obj = self.get_active_obj()
-        stored_edges = [e for e in self.sel_edges]
-        self.select_edges(
-            context, self.bm.edges[:], select=False, skip_callback_func=self.is_boundary_edge)
-        verify_weight_layer(self)
-        set_edges_weight(self)
-        self.bmesh(context)
-        if stored_edges:
-            self.select_edges(context, self.bm.edges[:], select=False)
-            self.select_edges(context, stored_edges, select=True)
-        bmesh.update_edit_mesh(context.edit_object.data)
+        ews = EdgeWeightSetter(context, self.as_keywords())
+        ews.set_boundary_to_weighted()
         return {"FINISHED"}
 
 
@@ -377,6 +402,48 @@ class MESH_OT_origin_to_bottom_left(Operator):
         obj.matrix_world.translation = bot_left
         return {"FINISHED"}
 
+class SmartVertsJoiner(EditModeOperatorBaseClass):
+
+    def __init__(self, context, args):
+        super().__init__(context, args)
+        self.bmesh(context)
+        self.sel_verts = []
+        self.active_vert = None
+
+    def _set_verts_selection(self):
+        for v in self.bm.verts[:]:
+            if v.select and v not in self.sel_verts:
+                self.sel_verts.append(v)
+        self.active_vert = self.bm.select_history.active
+
+    @property
+    def _non_active(self):
+        return  [vert for vert in self.sel_verts if vert != self.active_vert]
+
+    @property
+    def _one_edge(self):
+        return len(self.sel_verts) == 2
+
+
+    def join_verts(self):
+        self._set_verts_selection()
+        if not self.active_vert and not self._one_edge:
+            self.report({"ERROR"}, "At least one vert must be active.")
+            return {"CANCELLED"}
+        if self._one_edge:
+            bmesh.ops.connect_vert_pair(self.bm, verts=self.sel_verts)
+        else:
+            for vert in self._non_active[:]:
+                pair = [vert, self.active_vert]
+                bmesh.ops.connect_vert_pair(self.bm, verts=pair)
+        bmesh.update_edit_mesh(self.mesh)
+        self.bm.free()
+
+        return {"FINISHED"}
+        
+
+    
+
 
 class MESH_OT_smart_join_verts(CustomBmeshOperator, Operator):
     bl_idname = "mesh.smart_join_verts"
@@ -385,27 +452,14 @@ class MESH_OT_smart_join_verts(CustomBmeshOperator, Operator):
 
     @classmethod
     def poll(cls, context):
-        return context.active_object is not None
+        active_obj = context.active_object
+        tools = context.scene.tool_settings.mesh_select_mode[:]
+        in_vert_select = tools[0] == True and not all(tools[1:])
+        return active_obj is not None and "EDIT" in context.mode and active_obj.type == "MESH" and in_vert_select 
 
     def execute(self, context):
-        self.bmesh(context)
-        sel_verts = set([v for v in self.bm.verts[:] if v.select])
-        active_vert = set([self.bm.select_history.active])
-        one_edge = len(sel_verts) == 2
-        non_active = sel_verts - active_vert
-        if not active_vert and not one_edge:
-            self.report({"ERROR"}, "At least one vert must be active.")
-            return {"CANCELLED"}
-        if one_edge:
-            bmesh.ops.connect_vert_pair(self.bm, verts=list(sel_verts))
-        else:
-            active = list(active_vert)[0]
-            for vert in non_active:
-                pair = [vert, active]
-                bmesh.ops.connect_vert_pair(self.bm, verts=pair)
-        bmesh.update_edit_mesh(self.mesh)
-        return {"FINISHED"}
-
+        svj = SmartVertsJoiner(context, self.as_keywords())
+        return svj.join_verts()
 
 def toggle_retopo_visibility(context):
     sd = context.space_data
@@ -539,13 +593,50 @@ def origin_to_bot_left_menu_func(self, context):
     op = pie.operator('mesh.origin_to_bottom_left')
 
 
-class CleanupMesh:
+def basically_zero(vector):
+    return all([v < .00001 for v in vector])
 
+def vert_edges_are_collinear(vert):
+    edges = vert.link_edges[:]
+    edge_vectors = []
+    for edge in edges:
+        edge_vector = np.subtract(*[v.co for v in edge.verts[:]])
+        edge_vectors.append(edge_vector)
+    return basically_zero(np.cross(*edge_vectors))
+
+
+def more_edges_than_faces(vert):
+        return len(vert.link_edges) >= len(vert.link_faces)
+    
+
+def is_center_edge_vert(vert):
+        if len(vert.link_edges) == 2:
+              return more_edges_than_faces(vert) and vert_edges_are_collinear(vert)
+        return False
+
+class CenterEdgeVertFinder:
+    def __init__(self, context):
+        self.context = context
+        self.obj = context.edit_object
+        self.mesh = self.obj.data
+        self.bm = bmesh.from_edit_mesh(self.mesh)
+  
+    @property
+    def center_edge_verts(self):
+        cevs =  [vert for vert in self.bm.verts[:] if is_center_edge_vert(vert)]
+        return cevs
+    
+    def cleanup_center_edge_verts(self):
+        bmesh.ops.dissolve_verts(self.bm, verts=self.center_edge_verts)
+        bmesh.update_edit_mesh(self.mesh)
+
+
+class CleanupMesh(EditModeOperatorBaseClass):
     def __init__(self, context, args, op=None):
+        super().__init__(context, args)
         if op is not None:
             self.op = op
-        self._set_args(args)
-        self.context = context
+        
         self.obj = context.edit_object
         self.mesh = self.obj.data
         self.bm = bmesh.from_edit_mesh(self.mesh)
@@ -562,10 +653,7 @@ class CleanupMesh:
         return tuple(bm_modes)
 
 
-    def _set_args(self, args):
-        if args:
-            for key, value in args.items():
-                setattr(self, key, value)
+    
 
     def _finish_op(self):
         self.context.tool_settings.mesh_select_mode = self._select_state_from_mode
@@ -641,6 +729,20 @@ class MESH_OT_cleanup_select_ngons(CustomOperator, bpy.types.Operator):
     def execute(self, context):
         cleaner = CleanupMesh(context, self.args, op=self)
         return cleaner.select_ngons()
+
+class MESH_OT_cleanup_center_edge_verts(CustomOperator, bpy.types.Operator):
+    bl_idname = "mesh.cleanup_center_edge_verts"
+    bl_label = "Cleanup Center-Edge Verts"
+    bl_options = {"REGISTER", "UNDO"}
+
+    @classmethod
+    def poll(cls, context):
+        return cls.edit_obj_poll(context)
+
+    def execute(self, context):
+        cleaner = CenterEdgeVertFinder(context)
+        cleaner.cleanup_center_edge_verts()
+        return {"FINISHED"}
 
 
 class MESH_OT_cleanup_select_small_faces(CustomOperator, bpy.types.Operator):
@@ -738,6 +840,73 @@ class MESH_OT_subdivide_inner_edges(CustomOperator, bpy.types.Operator):
         return {"FINISHED"}
 
 
+class CopyBevelWeights(EditModeOperatorBaseClass):
+
+    def __init__(self, context):
+        super().__init__(context)
+        self.mesh = context.edit_object.data
+        self.bm = bmesh_utils.get_bmesh(context)
+        self.bw_layer = self.bm.edges.layers.bevel_weight.verify()
+        self.bm.edges.ensure_lookup_table()
+        self.get_edge_weight_value()
+
+    def get_edge_weight_value(self):
+        edge = self.bm.select_history.active
+        self.weight = edge[self.bw_layer]
+
+    def set_edge_weight(self, edge):
+        edge[self.bw_layer] = self.weight
+
+    def execute(self):
+        for edge in self.sel_edges[:]:
+            self.set_edge_weight(edge)
+        bmesh.update_edit_mesh(self.mesh)
+        self.cleanup_bmesh()
+
+class MESH_OT_copy_edge_bevel_weights(CustomOperator, bpy.types.Operator):
+    bl_idname = "mesh.copy_edge_bevel_weight_from_active"
+    bl_label = "Copy Edge Bevel Weight From Active"
+    bl_options = {"REGISTER", "UNDO"}
+
+    @classmethod
+    def poll(cls, context):
+        return cls.edit_obj_poll(context)
+
+    def execute(self, context):
+        cbw = CopyBevelWeights(context)
+        cbw.execute()
+        return {"FINISHED"}
+    
+
+
+class MESH_OT_FlattenAndSharpenFaces(CustomOperator, bpy.types.Operator):
+    bl_idname = "mesh.flatten_and_sharpen_faces"
+    bl_label = "Flatten And Sharpen Faces"
+    bl_options = {"REGISTER", "UNDO"}
+
+    @classmethod
+    def poll(cls, context):
+        return cls.edit_obj_poll(context)
+
+    def execute(self, context):
+        tools = context.scene.tool_settings
+        orig_select_mode = tools.mesh_select_mode[:]
+        bpy.ops.mesh.edge_face_add()
+        bpy.ops.mesh.f2()
+        bpy.ops.mesh.face_make_planar()
+        bpy.ops.mesh.quads_convert_to_tris(quad_method='BEAUTY', ngon_method='BEAUTY')
+        bpy.ops.mesh.tris_convert_to_quads()
+        bpy.ops.mesh.region_to_loop()
+        bpy.ops.mesh.mark_sharp()
+        for i, mode in enumerate(orig_select_mode):
+            if i != 2:
+                tools.mesh_select_mode[i] = False
+            else:
+                tools.mesh_select_mode[i] = True
+        return {"FINISHED"}
+        
+
+
 classes = (
     MESH_OT_reduce_cylinder,
     MESH_OT_reduce_circle_segments,
@@ -762,6 +931,10 @@ classes = (
     MESH_OT_cleanup_select_ngons,
     MESH_OT_cleanup_handle_ngons,
     MESH_OT_subdivide_inner_edges,
+    MESH_OT_cleanup_center_edge_verts,
+    MESH_OT_subdivide_inner_edges,
+    MESH_OT_copy_edge_bevel_weights,
+    MESH_OT_FlattenAndSharpenFaces
 )
 
 kms = [

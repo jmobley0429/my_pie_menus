@@ -1,4 +1,5 @@
 from collections import deque
+import re
 from statistics import mean
 
 import numpy as np
@@ -9,6 +10,27 @@ from mathutils import Vector
 from .custom_operator import CustomOperator, CustomModalOperator, ModalDrawText
 import utils
 
+class OBJECT_OT_AddMultipleModifiers(bpy.types.Operator):
+    bl_idname = 'object.multiple_modifiers_add'
+    bl_label = 'Add Multiple Modifiers'
+    bl_options = {'REGISTER', "UNDO"}
+
+    mod_type: bpy.props.StringProperty()
+    is_custom_mod: bpy.props.BoolProperty(default=False)
+
+    @classmethod
+    def poll(cls, context):
+        return len(context.selected_objects) >= 1 and context.active_object
+    
+    def execute(self, context):
+        
+        for obj in context.selected_objects[:]:
+            if obj.type in {"MESH", "CURVE"}:
+                mod_name = self.mod_type.replace('_', ' ').capitalize()
+                mod = obj.modifiers.new(name=mod_name, type=self.mod_type)
+
+        return {"FINISHED"}
+    
 
 class CustomAddMirrorModifier(CustomOperator, Operator):
     """Add Mirror Custom Modifier"""
@@ -350,7 +372,8 @@ class CustomAddQuickBevSubSurfModifier(BevelModifier, Operator):
         in_edit = "EDIT" in context.mode
         if in_edit:
             bpy.ops.object.mode_set(mode="OBJECT")
-        self._add_bevel_modifier()
+        self._add_bevel_modifier(profile=1.0)
+        
         bpy.ops.object.modifier_add(type='SUBSURF')
         bpy.ops.object.modifier_add(type='WEIGHTED_NORMAL')
         bpy.ops.object.shade_smooth()
@@ -376,7 +399,8 @@ class CustomWeightedNormal(CustomOperator, Operator):
     def execute(self, context):
         obj = self.get_active_obj()
         obj.data.use_auto_smooth = True
-        bpy.ops.object.modifier_add(type="WEIGHTED_NORMAL")
+        mod = obj.modifiers.new('Weighted Normal', type="WEIGHTED_NORMAL")
+        mod.keep_sharp = True
         self.close_modifiers()
 
         return {"FINISHED"}
@@ -828,6 +852,41 @@ class ScrewModalOperator(CustomModalOperator, Operator):
             return {'RUNNING_MODAL'}
         else:
             return {'CANCELLED'}
+        
+
+def add_lattice_object(context, location=None):
+    lat_data = bpy.data.lattices.new("Lattice")
+    lat_obj = bpy.data.objects.new("Lattice", lat_data)
+    context.collection.objects.link(lat_obj)
+    if location is None:
+        location = context.scene.cursor.location
+    lat_obj.location = location
+    return lat_obj
+
+def add_lattice_mod_to_obj(obj, lattice, generate_lat=True):
+    if obj.type in {"MESH", "CURVE"}:
+        lat_mod = obj.modifiers.new('Lattice', type="LATTICE")
+        lat_mod.object = lattice
+        if generate_lat:
+            dims = obj.dimensions
+            ldims = lattice.dimensions
+            scale_fac = Vector([d / l for l, d in zip(ldims, dims)])
+            mx = obj.matrix_world
+            center = utils.get_bbox_center(obj, mx)
+            lattice.name = f"lattice_{obj.name}"
+            lattice.location = center
+            lattice.rotation_euler = obj.rotation_euler
+            lattice.scale *= scale_fac
+            lattice.data.points_u = 3
+            lattice.data.points_v = 3
+            lattice.data.points_w = 3
+
+
+def remove_lattices(context, lattice_object):
+    for obj in context.selected_objects[:]:
+        for mod in obj.modifiers[:]:
+            if mod.type == "LATTICE" and mod.object == lattice_object:
+                obj.modifiers.remove(mod)
 
 
 class CustomLattice(CustomModalOperator, Operator):
@@ -843,35 +902,21 @@ class CustomLattice(CustomModalOperator, Operator):
         return getattr(self.lattice.data, f"points_{self.current_axis}")
 
     def invoke(self, context, event):
-        self.obj = self.get_active_obj()
-        bpy.ops.object.add(type="LATTICE")
-        self.lattice = self.get_active_obj()
-        if not self.obj:
-            return {"FINISHED"}
+        active_obj = context.view_layer.objects.active
+        generate_lat = active_obj.type != "LATTICE"
+        if generate_lat:
+            self.lattice = add_lattice_object(context)
         else:
-            context.view_layer.objects.active = self.obj
-        bpy.ops.object.modifier_add(type="LATTICE")
-        lat_mod = self._get_last_modifier()
-        lat_mod.object = self.lattice
-        dims = self.obj.dimensions
-        ldims = self.lattice.dimensions
-        scale_fac = Vector([d / l for l, d in zip(ldims, dims)])
-        mx = self.obj.matrix_world
-        center = utils.get_bbox_center(self.obj, mx)
-        self.lattice.name = f"lattice_{self.obj.name}"
-        self.lattice.location = center
-        self.lattice.rotation_euler = self.obj.rotation_euler
-        self.lattice.scale *= scale_fac
-        self.lattice.data.points_u = 3
-        self.lattice.data.points_v = 3
-        self.lattice.data.points_w = 3
-        self.mod = self._get_last_modifier()
-        
+            self.lattice = active_obj
+        if len(context.selected_objects) == 0:
+            self.lattice.select_set(True)
+            context.view_layer.objects.active = self.lattice
+        else:
+            for obj in context.selected_objects[:]:
+                if obj != self.lattice:
+                    add_lattice_mod_to_obj(obj, self.lattice, generate_lat=generate_lat)
         context.window_manager.modal_handler_add(self)
-        print("ADDED MODAL")
         return {"RUNNING_MODAL"}
-
-        
         
     @property
     def get_info_msg(self):
@@ -880,7 +925,6 @@ class CustomLattice(CustomModalOperator, Operator):
             letter = ax.upper()
             val = getattr(self.lattice.data, f'points_{ax}')
             lines.append(f"{letter}: {val}")
-        
         return ', '.join(lines)
 
 
@@ -903,12 +947,9 @@ class CustomLattice(CustomModalOperator, Operator):
             return {"FINISHED"}
         elif event.type in {"RIGHTMOUSE", "ESC"}:
             self._clear_info(context)
-            bpy.ops.object.modifier_remove(modifier=self.mod.name)
-            context.collection.objects.unlink(self.lattice)
+            remove_lattices(context, self.lattice)
+            bpy.data.objects.remove(self.lattice)
             return {"CANCELLED"}
-
-        
-
         return {'RUNNING_MODAL'}
 
 
@@ -1127,11 +1168,12 @@ class AddDisplaceCustom(CustomModalOperator, Operator):
             self.dp_coll = bpy.data.collections.new('DisplaceCoords')
             self.scene_coll = bpy.data.scenes['Scene'].collection
             self.scene_coll.children.link(self.dp_coll)
-            self.dp_coll.hide_viewport = True
+            self.dp_coll.hide_set(True)
         else:
             self.dp_coll = bpy.data.collections['DisplaceCoords']
         self.dp_coll.objects.link(self.empty)
-        self.active_coll.objects.unlink(self.empty)
+        empty_coll = self.empty.users_collection
+        empty_coll[0].objects.unlink(self.empty)
         context.window_manager.modal_handler_add(self)
 
         return {"RUNNING_MODAL"}
@@ -1212,7 +1254,6 @@ class AddDisplaceCustom(CustomModalOperator, Operator):
 
     def cleanup_textures(self):
         textures = bpy.data.textures[:]
-
         for tex in textures:
             if "Displace" in tex.name and tex.users == 0:
                 bpy.data.textures.remove(tex)
@@ -1307,6 +1348,8 @@ class AddDisplaceCustom(CustomModalOperator, Operator):
 
         elif event.type == "LEFTMOUSE":
             self.cleanup_textures()
+            e_name = re.sub('\.\d+', '', self.empty.name)
+            self.empty.name = f"{e_name}_{self.obj.name}_{self.current_texture.type.capitalize()}"
             self._clear_info(context)
 
             return {"FINISHED"}
@@ -1342,6 +1385,98 @@ class ToggleClipping(Operator):
                 mod.use_clip = not clip_state
         return {"FINISHED"}
 
+class CustomDataTransferModifier(CustomOperator):
+
+    def __init__(self, context, args, op):
+        self._set_args(args)
+        self.context = context 
+        self.operator = op
+
+    def _make_dt_object_collection(self):
+        coll = utils.get_or_create_blender_data_block('collections', 'data_transfer_objs')
+        utils.link_collection(coll)
+        coll.objects.link(self.active_obj)
+        root_coll = utils.find_objects_collection(self.active_obj)
+        root_coll.objects.unlink(self.active_obj)
+
+    
+    def _get_objs(self):
+        all_objs = self.context.selected_objects[:]
+        sel_objs = []
+        self.active_obj = self.context.active_object
+        if self.active_obj is not None:
+            for obj in all_objs:
+                if obj != self.active_obj:
+                    sel_objs.append(obj)
+        else:
+            sel_objs = all_objs
+        self.sel_objs = sel_objs
+
+    
+    def _add_mod(self, obj):
+        return obj.modifiers.new("DataTransfer", 'DATA_TRANSFER')
+
+    def _get_vertex_groups(self, obj):
+        good_names = [
+            'dt',
+            'data',
+            'data_transfer',
+            'datatransfer',
+            'trans',
+            'transfer',
+            'data_trans', 
+            ]
+        for group in obj.vertex_groups[:]:
+            if group.name.lower() in good_names:
+                return group
+            
+    def _set_target_object_atrributes(self):
+        mod_object_name = self.sel_objs[0].name
+        self.active_obj.display_type = "WIRE"
+        self.active_obj.name = f"{mod_object_name}_dt_target"
+        
+    def execute(self):
+        self._get_objs()
+        if self.active_obj is None:
+            for obj in self.sel_objs:
+                self._add_mod(obj)
+        else:
+            for obj in self.sel_objs:
+                mod = self._add_mod(obj)
+                mod.use_loop_data = True
+                mod.data_types_loops = {'CUSTOM_NORMAL'}
+                mod.loop_mapping = 'POLYINTERP_NEAREST'
+                mod.object = self.active_obj
+                v_group = self._get_vertex_groups(obj)
+                if v_group is not None:
+                    mod.vertex_group = v_group.name
+        if self.hide_target:
+            self._set_target_object_atrributes()
+            self._make_dt_object_collection()
+        return {'FINISHED'}
+
+class OBJECT_OT_CustomDataTransferModifier(bpy.types.Operator):
+    bl_idname = "object.custom_dt_modifier_add"
+    bl_label = "Data Transfer"
+    bl_description = "Adds Data Transfer Modifiers"
+    bl_options = {'REGISTER', "UNDO"}
+
+    hide_target: bpy.props.BoolProperty("Hide Target", default=True)
+
+
+    @classmethod
+    def poll(cls, context):
+        return bool(context.selected_objects)
+    
+    def invoke(self, context, event):
+        if event.alt:
+            self.hide_target = False
+        return self.execute(context)
+
+    def execute(self, context):
+        args = self.as_keywords()
+        dtmod = CustomDataTransferModifier(context, args, self)
+        return dtmod.execute()
 
 class ToggleSubDivVisibility(Operator):
     bl_idname = "object.toggle_subdiv_vis"
@@ -1392,6 +1527,26 @@ class ToggleSubDivVisibility(Operator):
         return {"FINISHED"}
 
 
+class OBJECT_OT_triangulate_modifier_add(Operator):
+    bl_idname = "object.triangulate_modifier_add"
+    bl_label = "Triangulate"
+    bl_description = "Adds Triangulate Modifier to all selected objects."
+    bl_options = {'REGISTER', "UNDO"}
+
+    @classmethod
+    def poll(cls, context):
+        return context.active_object is not None
+
+    def execute(self, context):
+        for obj in context.selected_objects:
+            mods = [mod.type for mod in obj.modifiers[:]]
+            if obj.type == "MESH" and "TRIANGULATE" not in mods:
+                mod = obj.modifiers.new("Triangulate", "TRIANGULATE")
+                mod.keep_custom_normals = True
+        return {"FINISHED"}
+
+
+
 def menu_func(self, context):
     layout = self.layout
     if context.active_object:
@@ -1415,16 +1570,15 @@ classes = {
     ArrayModalOperator,
     SolidifyModalOperator,
     ScrewModalOperator,
+    OBJECT_OT_CustomDataTransferModifier,
     # AddLatticeCustom,
     AddDisplaceCustom,
     ToggleSubDivVisibility,
     ToggleClipping,
     OBJECT_OT_auto_crease_subdivide,
+    OBJECT_OT_triangulate_modifier_add,
+    OBJECT_OT_AddMultipleModifiers,
 }
-
-
-from my_pie_menus import utils
-
 
 kms = []
 

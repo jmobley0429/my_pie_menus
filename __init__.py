@@ -24,6 +24,7 @@ if "bpy" in locals():
     importlib.reload(node_editor_operators)
     importlib.reload(sculpt_mode_operators)
     importlib.reload(weight_paint_operators)
+    importlib.reload(render_operators)
     importlib.reload(uv_operators)
     importlib.reload(add_pies)
     importlib.reload(edit_mode_pies)
@@ -46,6 +47,7 @@ else:
     from my_pie_menus.operators import sculpt_mode_operators
     from my_pie_menus.operators import uv_operators
     from my_pie_menus.operators import weight_paint_operators
+    from my_pie_menus.operators import render_operators
     from my_pie_menus.menus import add_pies
     from my_pie_menus.menus import edit_mode_pies
     from my_pie_menus.menus import object_mode_pies
@@ -68,6 +70,7 @@ modules = [
     weight_paint_operators,
     uv_pies,
     weight_paint_pies,
+    render_operators,
 ]
 
 menu_funcs = [
@@ -80,8 +83,13 @@ menu_funcs = [
 global addon_keymaps
 addon_keymaps = []
 
+class MyPieMenuProps(bpy.types.PropertyGroup):
+    custom_vertex_color: bpy.props.FloatVectorProperty(name="Custom Vertex Color", size=4, min=0.0, max=1.0, subtype="COLOR")
 
 def register():
+    bpy.utils.register_class(MyPieMenuProps)
+    bpy.types.Scene.mpm_props = bpy.props.PointerProperty(type=MyPieMenuProps)
+
 
     for module in modules:
         print(f"registering {module.__name__}")
@@ -90,8 +98,9 @@ def register():
 
 def unregister():
     for module in modules:
-
         module.unregister()
+    del bpy.types.Scene.mpm_props
+    bpy.utils.unregister_class(MyPieMenuProps)
 
 
 if __name__ == "__main__":

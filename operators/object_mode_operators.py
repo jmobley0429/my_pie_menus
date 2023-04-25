@@ -1,4 +1,4 @@
-from my_pie_menus import utils
+from my_pie_menus.resources import utils
 import bpy
 import bmesh
 import json
@@ -16,8 +16,8 @@ from .custom_operator import (
     CustomOperator,
     CustomModalOperator,
     CustomBmeshOperator,
+    OperatorBaseClass,
 )
-import utils
 
 
 class AddCameraCustom(Operator):
@@ -28,13 +28,13 @@ class AddCameraCustom(Operator):
     def execute(self, context):
         bpy.ops.object.camera_add(
             enter_editmode=False,
-            align='VIEW',
+            align="VIEW",
             location=(0, 0, 0),
             rotation=(1.33911, 0.0142096, -0.524513),
             scale=(1, 1, 1),
         )
         bpy.ops.view3d.camera_to_view()
-        return {'FINISHED'}
+        return {"FINISHED"}
 
 
 class AddLightSetup(CustomOperator, Operator):
@@ -90,29 +90,43 @@ class AddLightSetup(CustomOperator, Operator):
 
         lights = []
         self.add_light(
-            key_loc, name="Key", energy=key_power, target_obj=track_obj, color=(1, 0.94, 0.88), size=key_size
+            key_loc,
+            name="Key",
+            energy=key_power,
+            target_obj=track_obj,
+            color=(1, 0.94, 0.88),
+            size=key_size,
         )
         _get_last_light()
         self.add_light(
-            fill_loc, name="Fill", energy=fill_power, target_obj=track_obj, color=(0.33, 0.80, 1), size=fill_size
+            fill_loc,
+            name="Fill",
+            energy=fill_power,
+            target_obj=track_obj,
+            color=(0.33, 0.80, 1),
+            size=fill_size,
         )
         _get_last_light()
         self.add_light(
-            rim_loc, name="Rim", energy=rim_power, target_obj=track_obj, color=(0.33, 0.80, 1), size=rim_size
+            rim_loc,
+            name="Rim",
+            energy=rim_power,
+            target_obj=track_obj,
+            color=(0.33, 0.80, 1),
+            size=rim_size,
         )
         _get_last_light()
 
         for l in lights:
             l.parent = track_obj
 
-        return {'FINISHED'}
+        return {"FINISHED"}
 
     def menu_func(self, context):
         self.layout.operator(self.bl_idname, text=self.bl_label)
 
 
 class SetCustomBatchName(Operator):
-
     bl_idname = "object.set_custom_batch_name"
     bl_label = "Set Custom Batch Name"
 
@@ -133,12 +147,9 @@ class SetCustomBatchName(Operator):
             if obj.name == self.name_string:
                 obj.name = "__temp__"
         for i, obj in enumerate(objs):
-            if i == 0:
-                obj.name = self.name_string
-            else:
-                new_name = f"{self.name_string}_{str(i).zfill(2)}"
-                obj.name = new_name
-        return {'FINISHED'}
+            new_name = f"{self.name_string}_{str(i+1).zfill(2)}"
+            obj.name = new_name
+        return {"FINISHED"}
 
     def draw(self, context):
         layout = self.layout
@@ -156,7 +167,6 @@ class SetCustomBatchName(Operator):
 
 
 class JG_SetUVChannels(Operator):
-
     bl_idname = "object.jg_set_uv_channels"
     bl_label = "Set JG UV Channels"
 
@@ -192,7 +202,7 @@ class JG_SetUVChannels(Operator):
             else:
                 continue
 
-        return {'FINISHED'}
+        return {"FINISHED"}
 
 
 class AlignOperator:
@@ -200,27 +210,27 @@ class AlignOperator:
         name="Axis",
         description="Alignment Axis",
         items=[
-            ('x', 'X', "X-Axis"),
-            ('y', 'Y', "Y-Axis"),
-            ('z', 'Z', "Z-Axis"),
+            ("x", "X", "X-Axis"),
+            ("y", "Y", "Y-Axis"),
+            ("z", "Z", "Z-Axis"),
         ],
-        default='x',
+        default="x",
     )
     align_to: bpy.props.EnumProperty(
         name="Axis",
         description="Where to align selected objects",
         items=[
-            ('NEG', 'Negative', "Negative"),
-            ('POS', 'Positive', "Positive"),
-            ('CURSOR', 'Cursor', "Cursor"),
-            ('ACTIVE', 'Active', "Active"),
-            ('GRID', 'Active', "Active"),
+            ("NEG", "Negative", "Negative"),
+            ("POS", "Positive", "Positive"),
+            ("CURSOR", "Cursor", "Cursor"),
+            ("ACTIVE", "Active", "Active"),
+            ("GRID", "Active", "Active"),
             ("ROW", "Row", "Row"),
         ],
         default="GRID",
     )
 
-    axes = list('xyz')
+    axes = list("xyz")
 
     @classmethod
     def poll(cls, context):
@@ -237,7 +247,6 @@ class AlignOperator:
 
 
 class OBJECT_OT_sort_items_on_axis(AlignOperator, CustomModalOperator, Operator):
-
     bl_idname = "object.sort_objects_on_axis"
     bl_label = "Sort Objects on Axis"
     bl_options = {"REGISTER", "UNDO"}
@@ -248,11 +257,11 @@ class OBJECT_OT_sort_items_on_axis(AlignOperator, CustomModalOperator, Operator)
         name="Grid Axis",
         description="Axis on which to array items on a grid",
         items=[
-            ('x', 'X', "X-Axis"),
-            ('y', 'Y', "Y-Axis"),
-            ('z', 'Z', "Z-Axis"),
+            ("x", "X", "X-Axis"),
+            ("y", "Y", "Y-Axis"),
+            ("z", "Z", "Z-Axis"),
         ],
-        default='y',
+        default="y",
     )
     initial_loc = Vector((0, 0, 0))
     sort_asc = None
@@ -300,12 +309,14 @@ class OBJECT_OT_sort_items_on_axis(AlignOperator, CustomModalOperator, Operator)
             f"(G) GRID AXIS: {self.grid_axis_string}",
             f"(S) Sort Type: {type}",
         ]
-        return ', '.join(msg)
+        return ", ".join(msg)
 
     def calc_obj_loc(self):
         obj_dim = self.get_obj_dim(self.current_obj)
         prev_dim = self.get_obj_dim(self.prev_obj)
-        return self.get_new_loc_tuple(((obj_dim + prev_dim) / 2) * self.spacing_multiplier)
+        return self.get_new_loc_tuple(
+            ((obj_dim + prev_dim) / 2) * self.spacing_multiplier
+        )
 
     def cycle_axis(self, event, axis, axis_type="axis"):
         current_axis_index = self.axes.index(axis)
@@ -358,7 +369,9 @@ class OBJECT_OT_sort_items_on_axis(AlignOperator, CustomModalOperator, Operator)
 
         if self.sort_asc is None:
             return self.original_obj_list
-        return sorted(self.objs, key=lambda obj: get_obj_dims(obj), reverse=self.sort_asc)
+        return sorted(
+            self.objs, key=lambda obj: get_obj_dims(obj), reverse=self.sort_asc
+        )
 
     def invoke(self, context, event):
         self.objs = self.get_objs(context)
@@ -377,8 +390,9 @@ class OBJECT_OT_sort_items_on_axis(AlignOperator, CustomModalOperator, Operator)
             if self.align_to == "ACTIVE":
                 self.initial_loc = context.active_object.location.copy()
             elif self.align_to in {"NEG", "POS"}:
-                locs = sorted(self.original_locations,
-                              key=lambda x: getattr(x, self.axis))
+                locs = sorted(
+                    self.original_locations, key=lambda x: getattr(x, self.axis)
+                )
                 self.initial_loc = locs[-1]
                 if self.align_to == "NEG":
                     self.initial_loc = locs[0]
@@ -397,8 +411,7 @@ class OBJECT_OT_sort_items_on_axis(AlignOperator, CustomModalOperator, Operator)
             if event.type == "TAB":
                 self.cycle_axis(event, axis=self.axis)
             elif event.type == "G":
-                self.cycle_axis(event, axis=self.grid_axis,
-                                axis_type="grid_axis")
+                self.cycle_axis(event, axis=self.grid_axis, axis_type="grid_axis")
             elif event.type == "WHEELUPMOUSE":
                 if event.ctrl:
                     self.set_grid_offset(1)
@@ -426,13 +439,13 @@ class OBJECT_OT_sort_items_on_axis(AlignOperator, CustomModalOperator, Operator)
 class OBJECT_OT_align_objects(AlignOperator, Operator):
     bl_idname = "object.align_objects"
     bl_label = "Align Objects"
-    bl_options = {'REGISTER', 'UNDO'}
+    bl_options = {"REGISTER", "UNDO"}
 
     def invoke(self, context, event):
         self.objs = self.get_objs(context)
         self.active_obj = context.active_object
         locs = [obj.location.copy() for obj in self.objs]
-        if self.align_to in {'NEG', "POS"}:
+        if self.align_to in {"NEG", "POS"}:
             locs = [getattr(loc, self.axis) for loc in locs]
             if self.align_to == "NEG":
                 self.align_loc = self.get_new_loc_tuple(min(locs))
@@ -455,7 +468,7 @@ class OBJECT_OT_align_objects(AlignOperator, Operator):
 class OBJECT_OT_set_auto_smooth_modal(CustomModalOperator, Operator):
     bl_idname = "object.auto_smooth_modal"
     bl_label = "Set Auto Smooth"
-    bl_options = {'REGISTER', 'UNDO'}
+    bl_options = {"REGISTER", "UNDO"}
 
     @property
     def is_auto_smoothed(self):
@@ -492,7 +505,7 @@ class OBJECT_OT_set_auto_smooth_modal(CustomModalOperator, Operator):
             f"SHADE MODE (S): {ss_msg}",
         ]
 
-        return ', '.join(msg)
+        return ", ".join(msg)
 
     def change_smoothing_angle(self, context, event, set_angle=False):
         if set_angle:
@@ -524,7 +537,7 @@ class OBJECT_OT_set_auto_smooth_modal(CustomModalOperator, Operator):
             context.space_data.overlay.show_overlays = False
         self.toggle_shading(context)
         context.window_manager.modal_handler_add(self)
-        print('running')
+        print("running")
         return {"RUNNING_MODAL"}
 
     def modal(self, context, event):
@@ -552,11 +565,10 @@ class OBJECT_OT_set_auto_smooth_modal(CustomModalOperator, Operator):
                 if self.in_edit:
                     self.to_mode("EDIT")
                 return self.exit_modal(context, cancelled=True)
-            elif event.type in {'WHEELUPMOUSE', "WHEELDOWNMOUSE"}:
+            elif event.type in {"WHEELUPMOUSE", "WHEELDOWNMOUSE"}:
                 self.change_smoothing_angle(context, event)
             elif event.type in self.numpad_input:
                 if event.type == "NUMPAD_ENTER":
-
                     self.current_angle = self.float_numpad_value
                     self.change_smoothing_angle(context, event, set_angle=True)
                     self.numpad_value = []
@@ -570,7 +582,7 @@ class OBJECT_OT_set_auto_smooth_modal(CustomModalOperator, Operator):
 class OBJECT_add_empty_at_objs_center(Operator):
     bl_idname = "object.add_empty_at_objs_center"
     bl_label = "Add Object at Objects Center"
-    bl_options = {'REGISTER', 'UNDO'}
+    bl_options = {"REGISTER", "UNDO"}
 
     @classmethod
     def poll(cls, context):
@@ -579,7 +591,7 @@ class OBJECT_add_empty_at_objs_center(Operator):
     def _add_object_and_parent(self, context, obj):
         matrix = obj.matrix_world
         center = utils.get_bbox_center(obj, matrix)
-        bpy.ops.object.empty_add(type='SPHERE', location=center)
+        bpy.ops.object.empty_add(type="SPHERE", location=center)
         empty = context.object
         empty.empty_display_size = 0.25
         utils.set_parent(obj, empty)
@@ -614,32 +626,32 @@ class OBJECT_add_empty_at_objs_center(Operator):
 class OBJECT_OT_quick_transforms(CustomOperator, Operator):
     bl_idname = "object.quick_transform"
     bl_label = "Quick Transform"
-    bl_options = {'REGISTER', 'UNDO'}
+    bl_options = {"REGISTER", "UNDO"}
     desc_lines = [
-        'Quick transform an object by set amount',
-        'CTRL - Multiply transform amount by -1.',
-        'ALT - Transform amount = 1 / transform amount',
+        "Quick transform an object by set amount",
+        "CTRL - Multiply transform amount by -1.",
+        "ALT - Transform amount = 1 / transform amount",
     ]
-    bl_description = '\n'.join(desc_lines)
+    bl_description = "\n".join(desc_lines)
 
     axis: bpy.props.EnumProperty(
         items=(
-            ('X', "X", "X Axis"),
-            ('Y', "Y", "Y Axis"),
-            ('Z', "Z", "Z Axis"),
-            ('ALL', "All", "All Axes"),
+            ("X", "X", "X Axis"),
+            ("Y", "Y", "Y Axis"),
+            ("Z", "Z", "Z Axis"),
+            ("ALL", "All", "All Axes"),
         ),
-        name='Axis',
-        description='Transform Axis',
+        name="Axis",
+        description="Transform Axis",
         default=None,
     )
     transform_type: bpy.props.EnumProperty(
         items=(
-            ('Scale', "Scale", "Scale"),
-            ('Rotation', "Rotation", "Rotation"),
+            ("Scale", "Scale", "Scale"),
+            ("Rotation", "Rotation", "Rotation"),
         ),
-        name='Transform Type',
-        description='Type of Transform',
+        name="Transform Type",
+        description="Type of Transform",
         default=None,
     )
     transform_amt: bpy.props.FloatProperty(name="Transform Amount")
@@ -649,20 +661,20 @@ class OBJECT_OT_quick_transforms(CustomOperator, Operator):
         if self.axis == "ALL":
             return [1, 1, 1]
         vector = [0, 0, 0]
-        i = list('XYZ').index(self.axis)
+        i = list("XYZ").index(self.axis)
         vector[i] = 1
         return vector
 
     def rotate_object(self):
         deg = np.radians(self.transform_amt)
-        setattr(self, 'transform_amt', deg)
+        setattr(self, "transform_amt", deg)
         mat_func = getattr(self.mx, self.transform_type)
         transform_matrix = mat_func(self.transform_amt, 4, self.axis_as_vector)
         self.obj.matrix_world = transform_matrix
 
     def scale_object(self):
         if self.axis == "ALL":
-            scale_attr = getattr(self.obj, 'scale')
+            scale_attr = getattr(self.obj, "scale")
             scale_attr *= self.transform_amt
         else:
             scale_attr = getattr(self.obj.scale, self.axis.lower())
@@ -692,7 +704,63 @@ class OBJECT_OT_quick_transforms(CustomOperator, Operator):
             scale_apply = True
             self.scale_object()
         bpy.ops.object.transform_apply(
-            location=False, rotation=rotation_apply, scale=scale_apply)
+            location=False, rotation=rotation_apply, scale=scale_apply
+        )
+        return {"FINISHED"}
+
+
+class DuplicateObjectDeleter(OperatorBaseClass):
+    def __init__(self, context, args, op):
+        super().__init__(context, args, op=op)
+        self.ids = []
+        self.all_objs = []
+        self.dupe_objs = []
+        self.good_objs = []
+        self.deps = self.context.evaluated_depsgraph_get()
+
+    def _has_same_verts(self, obj, dupe):
+        print("comparing objs: ", obj.name, dupe.name)
+        obj = obj.evaluated_get(self.deps)
+        dupe = dupe.evaluated_get(self.deps)
+        same_verts = len(dupe.data.vertices[:]) == len(obj.data.vertices[:])
+        print("Has same verts: ", same_verts)
+        return same_verts
+
+    def get_obj_name(self, obj):
+        return re.split("\.|(_)\d{2}", obj.name)[0]
+
+    def get_obj_id(self, obj):
+        loc = obj.location
+        name = self.get_obj_name(obj)
+        return (loc, name)
+
+    def delete_dupe_objects(self):
+        sel_objs = self.context.selected_objects[:]
+        for obj in sel_objs:
+            if obj.type == "MESH":
+                self.all_objs.append(obj)
+        duped_objs = []
+        for obj in sel_objs:
+            if obj.type == "MESH":
+                id1 = self.get_obj_id(obj)
+                for check_obj in self.all_objs[:]:
+                    if check_obj != obj:
+                        id2 = self.get_obj_id(check_obj)
+                        if (
+                            id1 == id2
+                            and self._has_same_verts(obj, check_obj)
+                            and check_obj not in self.good_objs
+                        ):
+                            duped_objs.append(check_obj)
+                        else:
+                            self.good_objs.append(obj)
+
+        self.op.report({"INFO"}, f"Finished. {len(duped_objs)} deleted.")
+        for del_obj in duped_objs[:]:
+            try:
+                bpy.data.objects.remove(del_obj)
+            except ReferenceError:
+                print(f"couldn't delete: {del_obj.name}")
         return {"FINISHED"}
 
 
@@ -704,41 +772,22 @@ class OBJECT_OT_RemoveDoubledObjects(Operator):
         "that share the same location and name w/o suffix.",
     ]
     bl_description = "\n".join(desc_lines)
-    bl_options = {'REGISTER', 'UNDO'}
+    bl_options = {"REGISTER", "UNDO"}
 
     @classmethod
     def poll(cls, context):
         return len(context.selected_objects) > 1
 
     def execute(self, context):
-        ids = []
-        dupe_objs = []
-        objs = [obj for obj in context.selected_objects[:] if obj.type == "MESH"]
-        num_del_objs = 0
-        for obj in bpy.context.selected_objects[:]:
-            obj.select_set(False)
-
-        for obj in objs:
-            loc = obj.location
-            name = re.split('\.|(_)\d{2}', obj.name)[0]
-            if (loc, name) in ids:
-                index = ids.index((loc, name))
-                dupe = dupe_objs[index]
-                if len(dupe.data.vertices[:]) == len(obj.data.vertices[:]):
-                    obj.select_set(True)
-                    num_del_objs += 1
-                    bpy.ops.object.delete()
-            else:
-                ids.append((loc, name))
-                dupe_objs.append(obj)
-        self.report({"INFO"}, f"Finished. {num_del_objs} deleted.")
-        return {"FINISHED"}
+        args = self.as_keywords()
+        dod = DuplicateObjectDeleter(context, args, op=self)
+        return dod.delete_dupe_objects()
 
 
 class OBJECT_OT_deselect_parented_objs(CustomOperator, Operator):
     bl_idname = "object.deselect_parented_objs"
     bl_label = "Deselect Parented Objs"
-    bl_options = {'REGISTER', 'UNDO'}
+    bl_options = {"REGISTER", "UNDO"}
 
     def execute(self, context):
         objs = context.selected_objects
@@ -751,7 +800,7 @@ class OBJECT_OT_deselect_parented_objs(CustomOperator, Operator):
 class OBJECT_OT_quick_cloth_pin(CustomBmeshOperator, Operator):
     bl_idname = "object.quick_cloth_pin"
     bl_label = "Quick Cloth Pin"
-    bl_options = {'REGISTER', 'UNDO'}
+    bl_options = {"REGISTER", "UNDO"}
 
     def execute(self, context):
         self.obj = self.get_active_obj()
@@ -773,7 +822,6 @@ class OBJECT_OT_quick_cloth_pin(CustomBmeshOperator, Operator):
 
         for mod in self.obj.modifiers[:]:
             if mod.type == "CLOTH":
-
                 mod.settings.vertex_group_mass = "pin"
         return {"FINISHED"}
 
@@ -794,7 +842,7 @@ def toggle_multires(context, args):
 class OBJECT_OT_toggle_multires(CustomBmeshOperator, Operator):
     bl_idname = "object.toggle_multires"
     bl_label = "Toggle Multires"
-    bl_options = {'REGISTER', 'UNDO'}
+    bl_options = {"REGISTER", "UNDO"}
 
     highest: bpy.props.BoolProperty(name="All to Highest", default=False)
 
@@ -806,27 +854,27 @@ class OBJECT_OT_toggle_multires(CustomBmeshOperator, Operator):
 
 def deselect_parented_objs_menu_func(self, context):
     layout = self.layout
-    layout.operator('object.deselect_parented_objs')
+    layout.operator("object.deselect_parented_objs")
 
 
 def hide_widget_objects_menu_func(self, context):
     layout = self.layout
-    layout.operator('object.move_widgets_to_collection')
+    layout.operator("object.move_widgets_to_collection")
 
 
 def deselect_modifier_panel_ops(self, context):
     layout = self.layout
     col = layout.column(align=True)
     row = col.row(align=True)
-    row.operator('object.toggle_subdiv_vis')
-    row.operator('object.toggle_mirror_clipping')
+    row.operator("object.toggle_subdiv_vis")
+    row.operator("object.toggle_mirror_clipping")
     row = col.row(align=True)
     op = row.operator(
-        'object.toggle_multires',
+        "object.toggle_multires",
         text="Multires to Lowest",
     )
     op.highest = False
-    op = row.operator('object.toggle_multires', text="Multires to Highest")
+    op = row.operator("object.toggle_multires", text="Multires to Highest")
     op.highest = True
 
 
@@ -837,9 +885,9 @@ def is_widget(obj):
 def create_wgt_collection():
     coll_exists = False
     try:
-        coll = bpy.data.collections['wgts']
+        coll = bpy.data.collections["wgts"]
     except KeyError:
-        coll = bpy.data.collections.new('wgts')
+        coll = bpy.data.collections.new("wgts")
     return coll
 
 
@@ -886,15 +934,16 @@ class OBJECT_OT_clean_up_quadremesh_names(bpy.types.Operator):
 
     def execute(self, context):
         for obj in bpy.data.objects[:]:
-            obj.name = obj.name.replace('Retopo_', '')
+            obj.name = obj.name.replace("Retopo_", "")
         return {"FINISHED"}
 
 
 def generate_random_v_colors_per_obj(context, **args):
-    multi_obj = args.pop('multi_obj')
+    multi_obj = args.pop("multi_obj")
+    color_picker = args.pop("color_picker")
     objs = context.selected_objects[:]
     colors = []
-    margin = .03
+    margin = 0.03
 
     def generate_color():
         too_close = False
@@ -911,20 +960,46 @@ def generate_random_v_colors_per_obj(context, **args):
             return color
         return generate_color()
 
-    if not multi_obj:
+    if color_picker:
+        color = context.scene.mpm_props.custom_vertex_color
+    elif not multi_obj:
         color = generate_color()
 
     for obj in objs:
-        mesh = obj.data
-        vcol = mesh.vertex_colors
-        color_layer = vcol['Col'] if vcol else vcol.new()
-        if multi_obj:
-            color = generate_color()
-        i = 0
-        for poly in mesh.polygons[:]:
-            for loop in poly.loop_indices:
-                color_layer.data[i].color = color
-                i += 1
+        if obj.type == "MESH":
+            mesh = obj.data
+            vcol = mesh.vertex_colors
+            color_layer = vcol["Col"] if vcol else vcol.new()
+            if multi_obj:
+                color = generate_color()
+            i = 0
+            for poly in mesh.polygons[:]:
+                for loop in poly.loop_indices:
+                    color_layer.data[i].color = color
+                    i += 1
+
+
+def move_bool_objects(context):
+    bool_coll = utils.get_or_create_collection("bools")
+    for obj in context.selected_objects:
+        coll = utils.find_objects_collection(obj)
+        if obj.display_type == "BOUNDS":
+            coll.objects.unlink(obj)
+            bool_coll.objects.link(obj)
+
+
+class OBJECT_OT_move_bool_objs_to_coll(bpy.types.Operator):
+    bl_idname = "object.move_bool_objects_to_coll"
+    bl_label = "Move Bool Objects"
+    bl_options = {"REGISTER", "UNDO"}
+
+    @classmethod
+    def poll(cls, context):
+        return context.mode == "OBJECT" and context.selected_objects
+
+    def execute(self, context):
+        move_bool_objects(context)
+        return {"FINISHED"}
 
 
 class OBJECT_OT_generate_random_v_colors_per_obj(bpy.types.Operator):
@@ -935,7 +1010,12 @@ class OBJECT_OT_generate_random_v_colors_per_obj(bpy.types.Operator):
     multi_obj: bpy.props.BoolProperty(
         default=False,
         name="Multi Object",
-        description="multi_obj: True, Give each selected object it's own random color. False: Set all objects to one color"
+        description="multi_obj: True, Give each selected object it's own random color. False: Set all objects to one color",
+    )
+    color_picker: bpy.props.BoolProperty(
+        default=False,
+        name="Color Picker",
+        description="If true, use color picker to assign vertex_color.",
     )
 
     @classmethod
@@ -948,9 +1028,211 @@ class OBJECT_OT_generate_random_v_colors_per_obj(bpy.types.Operator):
         return {"FINISHED"}
 
 
-def cleanup_qrm_names_menu_func(self, context):
-    layout = self.layout
-    layout.operator('object.delete_retopo')
+def add_custom_light(context, args):
+    light_type = args.pop("light_type")
+    light_name = light_type.capitalize()
+    cursor_loc = context.scene.cursor.location
+    light_data = bpy.data.lights.new(light_name, type=light_type)
+    light_data.use_contact_shadow = True
+    light_obj = bpy.data.objects.new(light_name, light_data)
+    context.collection.objects.link(light_obj)
+    light_obj.location = cursor_loc
+    context.view_layer.objects.active = light_obj
+    light_obj.select_set(True)
+
+
+class OBJECT_custom_light_add(bpy.types.Operator):
+    bl_idname = "object.custom_light_add"
+    bl_label = "Custom Add Light"
+    bl_options = {"REGISTER", "UNDO"}
+
+    light_type: bpy.props.EnumProperty(
+        items={
+            ("AREA", "Area", "Area"),
+            ("POINT", "Point", "Point"),
+            ("SPOT", "Spot", "Spot"),
+            ("SUN", "Sun", "Sun"),
+        },
+        name="Light Type",
+    )
+
+    @classmethod
+    def poll(cls, context):
+        return context.mode == "OBJECT"
+
+    def execute(self, context):
+        args = self.as_keywords()
+        add_custom_light(context, args)
+        return {"FINISHED"}
+
+
+def get_mesh_vcol_layer(mesh):
+    vcol = mesh.vertex_colors
+    color_layer = vcol["Col"] if vcol else vcol.new()
+    return color_layer
+
+
+def get_active_obj_vcol(obj):
+    mesh = obj.data
+    color_layer = get_mesh_vcol_layer(mesh)
+    rgb_values = []
+    i = 0
+    for poly in mesh.polygons[:]:
+        for loop in poly.loop_indices:
+            rgb_val = color_layer.data[i].color[:]
+            rgb_values.append(np.array(rgb_val))
+            i += 1
+
+    return np.mean(rgb_values, axis=0)
+
+
+def copy_vcol_from_active(context):
+    objs = context.selected_objects
+    active_obj = context.active_object
+    active_vcol = get_active_obj_vcol(active_obj)
+    for obj in objs:
+        if obj.type == "MESH" and obj != active_obj:
+            mesh = obj.data
+            color_layer = get_mesh_vcol_layer(mesh)
+            i = 0
+            for poly in mesh.polygons[:]:
+                for loop in poly.loop_indices:
+                    color_layer.data[i].color = active_vcol
+                    i += 1
+
+
+class OBJECT_OT_CopyVcolFromActive(bpy.types.Operator):
+    """Tooltip"""
+
+    bl_idname = "object.copy_vcol_from_active"
+    bl_label = "Copy Vertex Color from Active"
+
+    @classmethod
+    def poll(cls, context):
+        return (
+            context.active_object is not None and len(context.selected_objects[:]) > 1
+        )
+
+    def execute(self, context):
+        copy_vcol_from_active(context)
+        return {"FINISHED"}
+
+
+def copy_obj_name(context):
+    for obj in bpy.context.selected_objects[:]:
+        active_obj = bpy.context.view_layer.objects.active
+        if obj != active_obj:
+            obj.name = active_obj.name
+
+
+class OBJECT_OT_CopyObjName(bpy.types.Operator):
+    bl_idname = "object.copy_obj_name"
+    bl_label = "Copy Object Name"
+
+    @classmethod
+    def poll(cls, context):
+        return context.active_object is not None
+
+    def execute(self, context):
+        copy_obj_name(context)
+        return {"FINISHED"}
+
+class SMObjectNamer(OperatorBaseClass):
+    def __init__(self, context, args=None, op=None, index=None, root_obj=None):
+        super().__init__(context, args=args, op=op)
+        self.index = index
+        self.parent = root_obj
+
+    @staticmethod
+    def _get_num_suffix(index):
+        return str(index + 1).zfill(2)
+
+    @property
+    def _child_objects(self):
+        return [obj for obj in self.parent.children_recursive]
+
+    def get_name(self, obj, index):
+        if obj == self.parent:
+            name = self.name_str
+        else:
+            name = f"{self.name_str}_{self._get_num_suffix(self.index)}_SubObj"
+        return index, name
+
+    def format_name(self, i, name):
+        prefix = "SM"
+        suffix = self._get_num_suffix(i)
+        return "_".join([prefix, name, suffix])
+
+    def rename_objs(self):
+        i, name = self.get_name(self.parent, self.index)
+        self.parent.name = self.format_name(i, name)
+        for i, obj in enumerate(self._child_objects[:]):
+            _, name = self.get_name(obj, i)
+            obj.name = self.format_name(i, name)
+
+
+class OBJECT_OT_NameStaticMeshGrouping(bpy.types.Operator):
+    bl_idname = "object.name_static_mesh_grouping"
+    bl_label = "Name Static Mesh Grouping"
+    bl_options = {"REGISTER", "UNDO"}
+
+    name_str: bpy.props.StringProperty()
+
+    @classmethod
+    def poll(cls, context):
+        return len(context.selected_objects) > 0
+
+    def invoke(self, context, event):
+        return context.window_manager.invoke_props_dialog(self)
+
+    def execute(self, context):
+        objs = context.selected_objects[:]
+        for i, obj in enumerate(objs):
+            args = self.as_keywords()
+            SMNamer = SMObjectNamer(context, args=args, op=self, index=i, root_obj=obj)
+            SMNamer.rename_objs()
+        return {"FINISHED"}
+
+    def draw(self, context):
+        layout = self.layout
+
+        # Edit first editable button in popup
+        def row_with_icon(layout, icon):
+            row = layout.row()
+            row.activate_init = True
+            row.label(icon=icon)
+            return row
+
+        mode = context.mode
+        row = row_with_icon(layout, "OBJECT_DATAMODE")
+        row.prop(self, "name_str")
+
+class OBJECT_OT_CustomConvertObject(Operator):
+    """Convert object to another object type. CTRL > Keep Original"""
+
+    bl_idname = "object.custom_convert_object"
+    bl_label = "Custom Convert Object"
+    bl_description = """Convert object to another object type. CTRL > Keep Original."""
+    bl_options = {"REGISTER", "UNDO"}
+
+    target: bpy.props.StringProperty(default="MESH", name="Target")
+    keep_original: bpy.props.BoolProperty(default=False, name="Keep Original")
+
+
+    @classmethod
+    def poll(cls, context):
+        return context.selected_objects
+
+    def invoke(self, context, event):
+        self.keep_original = False
+        if event.ctrl:
+            self.keep_original = True 
+        return self.execute(context)
+    
+    def execute(self, context):
+        bpy.ops.object.convert(target=self.target, keep_original=self.keep_original)
+        return {"FINISHED"}
+
 
 
 classes = (
@@ -971,6 +1253,11 @@ classes = (
     OBJECT_OT_move_wgts_to_collection,
     OBJECT_OT_clean_up_quadremesh_names,
     OBJECT_OT_generate_random_v_colors_per_obj,
+    OBJECT_OT_CopyVcolFromActive,
+    OBJECT_custom_light_add,
+    OBJECT_OT_CopyObjName,
+    OBJECT_OT_NameStaticMeshGrouping,
+    OBJECT_OT_CustomConvertObject,
 )
 
 
@@ -1014,38 +1301,17 @@ addon_keymaps = []
 
 
 def register():
-
     utils.register_classes(classes)
     utils.register_keymaps(kms, addon_keymaps)
     bpy.types.VIEW3D_MT_select_object.append(deselect_parented_objs_menu_func)
     bpy.types.VIEW3D_MT_object.append(hide_widget_objects_menu_func)
     bpy.types.DATA_PT_modifiers.prepend(deselect_modifier_panel_ops)
-    try:
-        bpy.types.QREMESHER_PT_qremesher.append(cleanup_qrm_names_menu_func)
-    except AttributeError:
-        import importlib.util
-        import sys
-        vers = utils.get_blender_version()
-        if utils.is_linux():
-            path = f"/home/jake/.config/blender/{vers}/scripts/addons/quad_remesher_1_2/__init__.py"
-        else:
-            path = os.path.join(r"C:\Users\Jake\AppData\Roaming\Blender Foundation\Blender",
-                                vers, r"scripts\addons\quad_remesher_1_2\__init__.py")
-        importlib.util.spec_from_file_location('quad_remesher_1_2', path)
-        spec = importlib.util.spec_from_file_location(
-            'quad_remesher_1_2', path)
-        mod = importlib.util.module_from_spec(spec)
-        sys.modules['quad_remesher_1_2'] = mod
-        spec.loader.exec_module(mod)
-        bpy.utils.register_class(mod.QREMESHER_PT_qremesher)
-        bpy.types.QREMESHER_PT_qremesher.append(cleanup_qrm_names_menu_func)
 
 
 def unregister():
     bpy.types.VIEW3D_MT_select_object.remove(deselect_parented_objs_menu_func)
     bpy.types.DATA_PT_modifiers.remove(deselect_modifier_panel_ops)
     bpy.types.DATA_PT_modifiers.remove(deselect_modifier_panel_ops)
-    bpy.types.QREMESHER_PT_qremesher.remove(cleanup_qrm_names_menu_func)
 
     for cls in classes:
         bpy.utils.unregister_class(cls)

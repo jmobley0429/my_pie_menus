@@ -8,6 +8,11 @@ class CustomOperator:
     # def poll(cls, context):
     #     return context.active_object is not None
 
+    def _set_args(self, args):
+        if args:
+            for key, value in args.items():
+                setattr(self, key, value)
+
     def get_current_mode(self, context):
         if "EDIT" in context.mode:
             return "EDIT"
@@ -140,8 +145,11 @@ class CustomModalOperator(CustomOperator):
 
 
 class CustomBmeshOperator(CustomOperator):
+    
     @classmethod
     def bmesh(cls, context):
+        bpy.ops.object.mode_set(mode="OBJECT")
+        bpy.ops.object.mode_set(mode="EDIT")
         obj = context.active_object
         cls.mesh = obj.data
         bm = bmesh.from_edit_mesh(cls.mesh)
@@ -160,6 +168,9 @@ class CustomBmeshOperator(CustomOperator):
                 elem.select_set(False)
             else:
                 elem.select_set(True)
+    
+    def cleanup_bmesh(self):
+        self.bm.free()
 
     @property
     def sel_edges(self):
@@ -266,6 +277,22 @@ class OBJECT_OT_shade_auto_smooth(bpy.types.Operator):
         if in_edit:
             bpy.ops.object.mode_set(mode="EDIT")
         return {'FINISHED'}
+
+class OperatorBaseClass(CustomOperator):
+    
+    def __init__(self, context, args=None, op=None):
+        self.context = context
+        if args is not None:
+            self._set_args(args)
+        if op is not None:
+            self.op = op
+
+class EditModeOperatorBaseClass(OperatorBaseClass, CustomBmeshOperator):
+
+    def __init__(self, context, args=None, op=None):
+        super().__init__(context, args, op=op)
+
+    
 
 
 def register():

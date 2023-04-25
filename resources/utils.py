@@ -1,3 +1,4 @@
+import os
 import bpy
 import bmesh
 import math
@@ -229,3 +230,19 @@ def set_selected_and_active(context, obj=None, selected=True):
     context.view_layer.objects.active = obj 
     if obj:
         obj.select_set(selected)
+
+def get_random_rotation(min_rot=-np.pi, max_rot=np.pi):
+    rot = [np.random.uniform(min_rot, max_rot) for i in range(3)]
+    return Euler(rot, "XYZ")
+
+def generate_random_angle_renders(
+    render_obj,
+    num_imgs,
+    out_dir,
+    img_name_prefix,
+    ):
+    for i in range(num_imgs):
+        img_name = f'{img_name_prefix}_{str(i).zfill(2)}'
+        render_obj.rotation_euler = get_random_rotation()
+        bpy.context.scene.render.filepath = os.path.join(out_dir, img_name)
+        bpy.ops.render.render(write_still=True)

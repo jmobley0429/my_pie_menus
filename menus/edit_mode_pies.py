@@ -82,9 +82,11 @@ class MESH_MT_edge_menu(Menu):
         row = col.row(align=True)
         row.operator("mesh.edge_split")
         row = col.row(align=True)
-        row.operator("mesh.edge_rotate", text="Rotate CW").use_ccw = False
+        spl = row.split()
+        spl.operator("mesh.edge_rotate", text="Rotate CW").use_ccw = False
+        spl.operator("mesh.edge_rotate", text="CCW").use_ccw = True
         row = col.row(align=True)
-        row.operator("mesh.edge_rotate", text="Rotate CCW").use_ccw = True
+        row.operator("mesh.offset_edge_loops_slide")
        
 
 
@@ -229,17 +231,7 @@ classes = (
 )
 
 kms = [
-    {
-        "keymap_operator": "wm.call_menu_pie",
-        "name": "Mesh",
-        "letter": "ONE",
-        "shift": False,
-        "ctrl": False,
-        "alt": True,
-        "space_type": "VIEW_3D",
-        "region_type": "WINDOW",
-        "keywords": {"name": "MESH_MT_PIE_loop_tools"},
-    },
+    
     {
         "keymap_operator": "wm.call_menu_pie",
         "name": "Mesh",
@@ -305,6 +297,17 @@ kms = [
         "space_type": "VIEW_3D",
         "region_type": "WINDOW",
         "keywords": {"name": "MESH_MT_PIE_cleanup"},
+    },
+    {
+        "keymap_operator": "wm.call_menu_pie",
+        "name": "Mesh",
+        "letter": "ONE",
+        "shift": False,
+        "ctrl": False,
+        "alt": True,
+        "space_type": "VIEW_3D",
+        "region_type": "WINDOW",
+        "keywords": {"name": "MESH_MT_PIE_loop_tools"},
     },
 ]
 

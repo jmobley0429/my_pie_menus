@@ -26,13 +26,8 @@ class NODE_OT_directional_node_align(bpy.types.Operator):
 
     def execute(self, context):
         sel_nodes = context.selected_nodes
-        min_max_func = max
-        axis = "x"
-        if self.direction in {"LEFT", "BOTTOM"}:
-            min_max_func = min
-        if self.direction in {"TOP", "BOTTOM"}:
-            axis = "y"
-
+        axis = "y" if self.direction in {"TOP", "BOTTOM"} else "x"
+        min_max_func = min if self.direction in {"LEFT", "BOTTOM"} else max
         loc = min_max_func([getattr(node.location, axis) for node in sel_nodes])
         for node in sel_nodes:
             setattr(node.location, axis, loc)

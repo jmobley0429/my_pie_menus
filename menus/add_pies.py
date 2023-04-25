@@ -2,6 +2,9 @@ import bpy
 from bpy.types import Menu
 
 
+
+
+
 class PIE_MT_AddMesh(Menu):
     bl_idname = "PIE_MT_AddMesh"
     bl_label = "Pie Add Mesh"
@@ -189,14 +192,14 @@ class PIE_MT_PhysicsSubPie(Menu):
 
     def draw(self, context):
         layout = self.layout
-        op = layout.operator("object.modifier_add", text="Cloth", icon="MOD_CLOTH")
-        op.type = "CLOTH"
-        op = layout.operator("object.modifier_add", text="Collision", icon="MOD_PHYSICS")
-        op.type = "COLLISION"
-        op = layout.operator("object.modifier_add", text="Particle", icon="PARTICLES")
-        op.type = "PARTICLE_SYSTEM"
-        op = layout.operator("object.modifier_add", text="Soft Body", icon="MOD_SOFT")
-        op.type = "SOFT_BODY"
+        op = layout.operator("object.multiple_modifiers_add", text="Cloth", icon="MOD_CLOTH")
+        op.mod_type = "CLOTH"
+        op = layout.operator("object.multiple_modifiers_add", text="Collision", icon="MOD_PHYSICS")
+        op.mod_type = "COLLISION"
+        op = layout.operator("object.multiple_modifiers_add", text="Particle", icon="PARTICLES")
+        op.mod_type = "PARTICLE_SYSTEM"
+        op = layout.operator("object.multiple_modifiers_add", text="Soft Body", icon="MOD_SOFT")
+        op.mod_type = "SOFT_BODY"
         op = layout.operator("rigidbody.object_add", text="Rigid Body", icon="RIGID_BODY")
 
 
@@ -212,14 +215,15 @@ class PIE_MT_MeshSubPie(Menu):
 
     def draw(self, context):
         layout = self.layout
-        op = layout.operator("object.modifier_add", text="Multires", icon="MOD_MULTIRES")
-        op.type = "MULTIRES"
+        op = layout.operator("object.multiple_modifiers_add", text="Multires", icon="MOD_MULTIRES")
+        op.mod_type = "MULTIRES"
         layout.operator("object.custom_remesh", text="Remesh", icon="MOD_REMESH")
         layout.operator("object.custom_decimate", text="Decimate", icon="MOD_DECIM")
-        op = layout.operator("object.modifier_add", text="Smooth", icon="MOD_SMOOTH")
-        op.type = "SMOOTH"
-        op = layout.operator("object.modifier_add", text="Wireframe", icon="MOD_WIREFRAME")
-        op.type = "WIREFRAME"
+        op = layout.operator("object.multiple_modifiers_add", text="Smooth", icon="MOD_SMOOTH")
+        op.mod_type = "SMOOTH"
+        op = layout.operator("object.multiple_modifiers_add", text="Weld", icon="AUTOMERGE_OFF")
+        op.mod_type = "WELD"
+        op = layout.operator("object.triangulate_modifier_add", text="Triangulate", icon="TRIA_UP")
 
 
 class PIE_MT_add_armature_extended(Menu):
@@ -246,12 +250,10 @@ class PIE_MT_NormalSubPie(Menu):
 
     def draw(self, context):
         layout = self.layout
-        op = layout.operator("object.modifier_add", text="Weighted Normal", icon="NORMALS_VERTEX")
-        op.type = "WEIGHTED_NORMAL"
-        op = layout.operator("object.modifier_add", text="UV Project", icon="MOD_UVPROJECT")
-        op.type = "UV_PROJECT"
-        op = layout.operator("object.modifier_add", text="Data Transfer", icon="CON_TRANSLIKE")
-        op.type = "DATA_TRANSFER"
+        op = layout.operator("object.custom_weighted_normal", text="Weighted Normal", icon="NORMALS_VERTEX")
+        op = layout.operator("object.multiple_modifiers_add", text="UV Project", icon="MOD_UVPROJECT")
+        op.mod_type = "UV_PROJECT"
+        op = layout.operator("object.custom_dt_modifier_add", text="Data Transfer", icon="CON_TRANSLIKE")
 
 
 class PIE_MT_AddModifier(Menu):
@@ -311,8 +313,8 @@ class PIE_MT_AddModifier(Menu):
         # TR --
         op = pie.menu("PIE_MT_MeshSubPie", text="Mesh", icon='MOD_REMESH')
         # BL --
-        op = pie.operator("object.modifier_add", text="Geometry Nodes", icon="NODETREE")
-        op.type = "NODES"
+        op = pie.operator("object.multiple_modifiers_add", text="Geometry Nodes", icon="NODETREE")
+        op.mod_type = "NODES"
         # BL --
         op = pie.menu("PIE_MT_NormalSubPie", text="Normals and UVs", icon="SNAP_NORMAL")
 
@@ -329,15 +331,15 @@ class PIE_MT_AddOtherObjects(Menu):
         box = pie.split().column()
         box.label(text="Light")
         spl = box.split()
-        op = spl.operator("object.light_add", text="Point", icon="LIGHT_POINT")
-        op.type = "POINT"
-        op = spl.operator("object.light_add", text="Area", icon="LIGHT_AREA")
-        op.type = "AREA"
+        op = spl.operator("object.custom_light_add", text="Point", icon="LIGHT_POINT")
+        op.light_type = "POINT"
+        op = spl.operator("object.custom_light_add", text="Area", icon="LIGHT_AREA")
+        op.light_type = "AREA"
         spl = box.split()
-        op = spl.operator("object.light_add", text="Sun", icon="LIGHT_SUN")
-        op.type = "SUN"
-        op = spl.operator("object.light_add", text="Spot", icon="LIGHT_SPOT")
-        op.type = "SPOT"
+        op = spl.operator("object.custom_light_add", text="Sun", icon="LIGHT_SUN")
+        op.light_type = "SUN"
+        op = spl.operator("object.custom_light_add", text="Spot", icon="LIGHT_SPOT")
+        op.light_type = "SPOT"
         # Right -- CubeMaps
         box = pie.split().column()
         box.label(text="Light Probes")

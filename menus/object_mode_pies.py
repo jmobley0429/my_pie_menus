@@ -3,6 +3,12 @@ import bpy
 from bpy.types import Menu
 from my_pie_menus.operators import object_mode_operators as omo
 from my_pie_menus.operators.edit_mode_operators import *
+from my_pie_menus.operators.modifier_operators import *
+from my_pie_menus.operators.render_operators import *
+
+
+
+
 
 
 class PIE_MT_ConvertMeshCurve(Menu):
@@ -10,11 +16,19 @@ class PIE_MT_ConvertMeshCurve(Menu):
     bl_label = "Convert Mesh/Curve"
     bl_idname = "PIE_MT_ConvertMeshCurve"
 
+
     def draw(self, context):
         layout = self.layout
-
         pie = layout.menu_pie()
-        pie.operator_enum("object.convert", "target")
+        op = pie.operator("object.custom_convert_object", text="Curve")
+        op.target = "CURVE"
+        op = pie.operator("object.custom_convert_object", text="Mesh")
+        op.target = "MESH"
+        op = pie.operator("object.custom_convert_object", text="Grease Pencil")
+        op.target = "GPENCIL"
+        op = pie.operator("object.custom_convert_object", text="Curves")
+        op.target = "CURVES"
+        
 
 
 class PIE_MT_sort_objects(Menu):
@@ -300,6 +314,7 @@ class OBJECT_MT_quick_transform_pie(Menu):
 
 
 def jake_tools_panel(context, layout):
+    mpm_props = context.scene.mpm_props
     col = layout.column(align=True)
     box = col.box()
     box.label(text="Texturing Tools")
@@ -307,11 +322,19 @@ def jake_tools_panel(context, layout):
     col.label(text="Assign Random VCol")
     row = col.row(align=True)
     op = row.operator(
-        omo.OBJECT_OT_generate_random_v_colors_per_obj.bl_idname, text="Single")
+        omo.OBJECT_OT_generate_random_v_colors_per_obj.bl_idname, text="Single Random")
     op.multi_obj = False
     op = row.operator(
         omo.OBJECT_OT_generate_random_v_colors_per_obj.bl_idname, text="Multi Object")
     op.multi_obj = True
+    row = col.row(align=True)
+    row.prop(mpm_props, 'custom_vertex_color',)
+    row = col.row(align=True)
+    op = row.operator(
+        omo.OBJECT_OT_generate_random_v_colors_per_obj.bl_idname, text="Set Single Color")
+    row = col.row(align=True)
+    op = row.operator(
+        omo.OBJECT_OT_CopyVcolFromActive.bl_idname, text="Copy VCol from Active")
     col = layout.column(align=True)
     box = col.box()
     box.label(text="Mesh Cleanup Tools")
@@ -324,6 +347,23 @@ def jake_tools_panel(context, layout):
     row.operator(MESH_OT_cleanup_select_ngons.bl_idname)
     row = col.row()
     row.operator(MESH_OT_cleanup_handle_ngons.bl_idname)
+    row = col.row()
+    row.operator(MESH_OT_cleanup_center_edge_verts.bl_idname)
+
+
+    col = layout.column(align=True)
+    box = col.box()
+    box.label(text="Prop Tools")
+    col = box.column(align=True)
+    row = col.row()
+    row.operator(OBJECT_OT_triangulate_modifier_add.bl_idname)
+
+    box.label(text="Render Tools")
+    col = box.column(align=True)
+    row = col.row()
+    row.operator(RENDER_OT_BakeEeveeScene.bl_idname)
+    
+
 
 
 
