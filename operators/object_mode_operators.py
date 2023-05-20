@@ -1142,9 +1142,12 @@ class SMObjectNamer(OperatorBaseClass):
         super().__init__(context, args=args, op=op)
         self.index = index
         self.parent = root_obj
+        self.current_object = None
 
-    @staticmethod
-    def _get_num_suffix(index):
+    def _get_num_suffix(self, index):
+        if len(self.context.selected_objects[:]) < 2:
+            if self.current_object is None:
+                return ''
         return str(index + 1).zfill(2)
 
     @property
@@ -1155,18 +1158,37 @@ class SMObjectNamer(OperatorBaseClass):
         if obj == self.parent:
             name = self.name_str
         else:
-            name = f"{self.name_str}_{self._get_num_suffix(self.index)}_SubObj"
+            name = f"{self.name_str}_{self._get_num_suffix(self.index)}"
         return index, name
 
     def format_name(self, i, name):
         prefix = "SM"
+        if "SM_" in name:
+            name = name.replace("SM_", '')
         suffix = self._get_num_suffix(i)
-        return "_".join([prefix, name, suffix])
+        new_name = "_".join([prefix, name, suffix]).rstrip("_")
+        return new_name
+
+    @staticmethod
+    def _is_collision_mesh(obj):
+        coll = obj.users_collection[0].name.lower()
+        name = obj.name 
+        dt = obj.display_type
+        return any(
+            [
+               'collision' in coll,
+               "UCX" in name,
+               dt == "WIRE" 
+            ]
+        )
 
     def rename_objs(self):
         i, name = self.get_name(self.parent, self.index)
         self.parent.name = self.format_name(i, name)
         for i, obj in enumerate(self._child_objects[:]):
+            self.current_object = obj
+            if self._is_collision_mesh(obj):
+                continue
             _, name = self.get_name(obj, i)
             obj.name = self.format_name(i, name)
 
@@ -1176,17 +1198,21 @@ class OBJECT_OT_NameStaticMeshGrouping(bpy.types.Operator):
     bl_label = "Name Static Mesh Grouping"
     bl_options = {"REGISTER", "UNDO"}
 
-    name_str: bpy.props.StringProperty()
+    name_str: bpy.props.StringProperty(name="")
+    orig_name = ""
 
     @classmethod
     def poll(cls, context):
         return len(context.selected_objects) > 0
 
     def invoke(self, context, event):
+        
         return context.window_manager.invoke_props_dialog(self)
 
     def execute(self, context):
         objs = context.selected_objects[:]
+        for obj in objs:
+            obj.name == "__TEMP__rename"
         for i, obj in enumerate(objs):
             args = self.as_keywords()
             SMNamer = SMObjectNamer(context, args=args, op=self, index=i, root_obj=obj)
@@ -1195,17 +1221,14 @@ class OBJECT_OT_NameStaticMeshGrouping(bpy.types.Operator):
 
     def draw(self, context):
         layout = self.layout
-
-        # Edit first editable button in popup
-        def row_with_icon(layout, icon):
-            row = layout.row()
-            row.activate_init = True
-            row.label(icon=icon)
-            return row
-
-        mode = context.mode
-        row = row_with_icon(layout, "OBJECT_DATAMODE")
-        row.prop(self, "name_str")
+        icon = "OBJECT_DATAMODE"
+        box = layout
+        row = box.row()
+        row.label(text='Static Mesh Name')
+        row = box.row()
+        row.activate_init = True
+        prop = row.prop(self, "name_str",  icon=icon, )
+        
 
 class OBJECT_OT_CustomConvertObject(Operator):
     """Convert object to another object type. CTRL > Keep Original"""
@@ -1221,7 +1244,7 @@ class OBJECT_OT_CustomConvertObject(Operator):
 
     @classmethod
     def poll(cls, context):
-        return context.selected_objects
+        return context.selected_objects 
 
     def invoke(self, context, event):
         self.keep_original = False
@@ -1230,7 +1253,11 @@ class OBJECT_OT_CustomConvertObject(Operator):
         return self.execute(context)
     
     def execute(self, context):
-        bpy.ops.object.convert(target=self.target, keep_original=self.keep_original)
+        for obj in context.selected_objects[:]:
+            if obj.type in {'MESH', "CURVE", "METABALL", "GPENCIL", 'FONT'}:
+                print(obj.name, obj.type)
+                context.view_layer.objects.active = obj
+                bpy.ops.object.convert(target=self.target, keep_original=self.keep_original)
         return {"FINISHED"}
 
 

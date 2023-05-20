@@ -397,6 +397,59 @@ class VIEW3D_MT_PIE_toggle_view_transform(Menu):
         pie.prop_enum(context.scene.view_settings, "view_transform", "Filmic")
         pie.prop_enum(context.scene.view_settings,
                       "view_transform", "False Color")
+        
+
+class VIEW3D_MT_PIE_link_object_data(Menu):
+    # label is displayed at the center of the pie menu.
+    bl_idname = "VIEW3D_MT_PIE_link_object_data"
+    bl_label = "Link Data"
+
+    def draw(self, context):
+        layout = self.layout
+        pie = layout.menu_pie()
+        # operator_enum will just spread all available options
+        # for the type enum of the operator on the pie
+        op = pie.operator("object.make_links_data", text="Materials")
+        op.type = "MATERIAL"
+        op = pie.operator("object.make_links_data", text="Object Data")
+        op.type = "OBDATA"
+        op = pie.operator("object.make_links_data", text="Modifiers")
+        op.type = "MODIFIERS"
+        op = pie.operator("object.join_uvs", text="UV Maps")
+        op = pie.operator("object.make_single_user", text="Make Single User")
+        op.obdata = True
+
+class VIEW3D_MT_PIE_switch_to_workspace(Menu):
+    # label is displayed at the center of the pie menu.
+    bl_idname = "VIEW3D_MT_PIE_switch_to_workspace"
+    bl_label = "Switch to Workspace Pie"
+
+    def draw(self, context):
+        layout = self.layout
+        pie = layout.menu_pie()
+        op = pie.operator('wm.switch_to_workspace', text="Modeling")
+        op.ws_type = "Modeling"
+        op = pie.operator('wm.switch_to_workspace', text="Geometry Nodes")
+        op.ws_type = "Geometry Nodes"
+        op = pie.operator('wm.switch_to_workspace', text="Scripting")
+        op.ws_type = "Scripting"
+        op = pie.operator('wm.switch_to_workspace', text="UV Editing")
+        op.ws_type = "UV Editing"
+        op = pie.operator('wm.switch_to_workspace', text="Asset Browser")
+        op.ws_type = "Asset Browser"
+        op = pie.operator('wm.switch_to_workspace', text="Animation")
+        op.ws_type = "Animation"
+        op = pie.operator('wm.switch_to_workspace', text="Compositing")
+        op.ws_type = "Compositing"
+        
+        
+        
+        op = pie.operator('wm.switch_to_workspace', text="Shading")
+        op.ws_type = "Shading"
+       
+
+
+        
 
 
 
@@ -407,6 +460,8 @@ classes = (
     OBJECT_MT_quick_transform_pie,
     VIEW3D_MT_PIE_toggle_view_transform,
     OBJECT_PT_jake_tools_panel,
+    VIEW3D_MT_PIE_link_object_data,
+    VIEW3D_MT_PIE_switch_to_workspace
 )
 
 kms = [
@@ -453,6 +508,30 @@ kms = [
         "space_type": "VIEW_3D",
         "region_type": "WINDOW",
         "keywords": {"name": "OBJECT_MT_object_io_menu"},
+    },
+    {
+        "keymap_operator": "wm.call_menu_pie",
+        "name": "Object Mode",
+        "letter": "FOUR",
+        "shift": 0,
+        "ctrl": 0,
+        "alt": 1,
+        "space_type": "VIEW_3D",
+        "region_type": "WINDOW",
+        "keywords": {"name": "VIEW3D_MT_PIE_link_object_data"},
+    },
+    {
+        "keymap_operator": "wm.call_menu_pie",
+        "name": "Window",
+        "letter": "ACCENT_GRAVE",
+        "shift": 0,
+        "ctrl": 0,
+        "alt": 1,
+        'space_type': "EMPTY",
+        "region_type": "WINDOW",
+        "keywords": {
+            "name": VIEW3D_MT_PIE_switch_to_workspace.bl_idname,
+            },
     },
 ]
 

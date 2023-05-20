@@ -15,7 +15,6 @@ def db_block(area: str):
 
 if "bpy" in locals():
     import importlib
-
     importlib.reload(custom_operator)
     importlib.reload(modifier_operators)
     importlib.reload(add_mesh_operators)
@@ -26,6 +25,7 @@ if "bpy" in locals():
     importlib.reload(weight_paint_operators)
     importlib.reload(render_operators)
     importlib.reload(uv_operators)
+    importlib.reload(ui_operators)
     importlib.reload(add_pies)
     importlib.reload(edit_mode_pies)
     importlib.reload(object_mode_pies)
@@ -48,6 +48,7 @@ else:
     from my_pie_menus.operators import uv_operators
     from my_pie_menus.operators import weight_paint_operators
     from my_pie_menus.operators import render_operators
+    from my_pie_menus.operators import ui_operators
     from my_pie_menus.menus import add_pies
     from my_pie_menus.menus import edit_mode_pies
     from my_pie_menus.menus import object_mode_pies
@@ -71,6 +72,7 @@ modules = [
     uv_pies,
     weight_paint_pies,
     render_operators,
+    ui_operators
 ]
 
 menu_funcs = [

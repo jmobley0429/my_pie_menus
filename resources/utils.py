@@ -79,32 +79,35 @@ def get_blender_version():
 def register_keymaps(kms, addon_keymaps):
     if kms or kms is not None:
         for keymap in kms:
-            keymap_operator = keymap.pop("keymap_operator")
-            name = keymap.pop("name")
-            letter = keymap.pop("letter")
-            shift = keymap.pop("shift")
-            ctrl = keymap.pop("ctrl")
-            alt = keymap.pop("alt")
-            space_type = keymap.pop("space_type")
-            region_type = keymap.pop("region_type")
-            keywords = keymap.pop('keywords')
+            try:
+                keymap_operator = keymap.pop("keymap_operator")
+                name = keymap.pop("name")
+                letter = keymap.pop("letter")
+                shift = keymap.pop("shift")
+                ctrl = keymap.pop("ctrl")
+                alt = keymap.pop("alt")
+                space_type = keymap.pop("space_type")
+                region_type = keymap.pop("region_type")
+                keywords = keymap.pop('keywords')
 
-            wm = bpy.context.window_manager
-            kc = wm.keyconfigs.addon
-            if kc:
-                # existing_kmis = get_existing_keymap_items(name)
-                km = wm.keyconfigs.addon.keymaps.new(name=name)
-                kmi = km.keymap_items.new(
-                    keymap_operator, letter, 'PRESS', ctrl=ctrl, alt=alt, shift=shift)
-                # str_vers = kmi.to_string()
-                kmi.active = True
-                # for ekmi in existing_kmis:
-                #     if str_vers == ekmi.to_string():
-                #         ekmi.active = False
+                wm = bpy.context.window_manager
+                kc = wm.keyconfigs.addon
+                if kc:
+                    # existing_kmis = get_existing_keymap_items(name)
+                    km = wm.keyconfigs.addon.keymaps.new(name=name)
+                    kmi = km.keymap_items.new(
+                        keymap_operator, letter, 'PRESS', ctrl=ctrl, alt=alt, shift=shift)
+                    # str_vers = kmi.to_string()
+                    kmi.active = True
+                    # for ekmi in existing_kmis:
+                    #     if str_vers == ekmi.to_string():
+                    #         ekmi.active = False
 
-                for kw, value in keywords.items():
-                    setattr(kmi.properties, kw, value)
-                addon_keymaps.append((km, kmi))
+                    for kw, value in keywords.items():
+                        setattr(kmi.properties, kw, value)
+                    addon_keymaps.append((km, kmi))
+            except KeyError:
+                continue
 
 
 def register_classes(classes):

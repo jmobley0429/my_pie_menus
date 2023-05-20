@@ -543,6 +543,7 @@ class CustomDecimate(CustomOperator, Operator):
     bl_label = "Add Custom Decimate"
 
     apply_mod = False
+    dec_type = "COLLAPSE"
     mode = None
 
     @classmethod
@@ -554,17 +555,21 @@ class CustomDecimate(CustomOperator, Operator):
         self.mode = self.get_current_mode(context)
         if event.alt:
             self.apply_mod = True
+        if event.ctrl:
+            self.dec_type = "DISSOLVE"
         return self.execute(context)
 
     def execute(self, context):
         switch_mode = self.mode in {"EDIT", "SCULPT"}
         if switch_mode:
-            self.to_mode("OBJECT")
-        bpy.ops.object.modifier_add(type="DECIMATE")
-        mod = self._get_last_modifier()
-        mod.ratio = 0.2
-        if self.apply_mod:
-            bpy.ops.object.modifier_apply(modifier=mod.name)
+                self.to_mode("OBJECT")
+        for obj in context.selected_objects[:]:
+            mod = obj.modifiers.new(name="Decimate", type="DECIMATE" )
+            mod.decimate_type = self.dec_type
+            if self.dec_type == "COLLAPSE":
+                mod.ratio = 0.2
+            if self.apply_mod:
+                bpy.ops.object.modifier_apply(modifier=mod.name)
         if switch_mode:
             self.to_mode(self.mode)
         return {"FINISHED"}
@@ -1544,6 +1549,37 @@ class OBJECT_OT_triangulate_modifier_add(Operator):
                 mod = obj.modifiers.new("Triangulate", "TRIANGULATE")
                 mod.keep_custom_normals = True
         return {"FINISHED"}
+    
+
+
+
+# class SubDAndReprojectToActive(CustomOperator):
+
+#     def __init__(self, context, args, op):
+#         self._set_args(args)
+#         self.context = context 
+#         self.operator = op
+
+#     def main(self):
+
+
+
+# class OBJECT_OT_subd_and_reproject_to_active(Operator):
+#     bl_idname = "object.subd_and_reproject_to_active"
+#     bl_label = "SubD and Reproject"
+#     bl_description = "Adds MultiRes, subdivides and Shrinkwraps object to active."
+#     bl_options = {'REGISTER', "UNDO"}
+
+#     subd_number: bpy.props.IntProperty(name="Number of Subdivisions", default=2, min=0, max=3)
+
+
+#     @classmethod
+#     def poll(cls, context):
+#         return context.active_object is not None and len(context.selected_objects) > 1
+
+#     def execute(self, context):
+        
+#         return {"FINISHED"}
 
 
 
