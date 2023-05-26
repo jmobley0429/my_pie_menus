@@ -287,6 +287,10 @@ class OperatorBaseClass(CustomOperator):
         if op is not None:
             self.op = op
 
+    @property
+    def _active_obj(self):
+        return self.context.view_layer.objects.active
+
 class EditModeOperatorBaseClass(OperatorBaseClass, CustomBmeshOperator):
 
     def __init__(self, context, args=None, op=None):
