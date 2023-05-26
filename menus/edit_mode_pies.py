@@ -117,7 +117,7 @@ class MESH_MT_face_menu(Menu):
         spl.operator("mesh.fill_holes")
         spl.operator("mesh.face_make_planar")
         row = col.row()
-        row.operator("mesh.quick_tris_to_quads")
+        row.operator("mesh.knife_project")
 
         col = pie.column()
         op = col.operator("mesh.intersect")
