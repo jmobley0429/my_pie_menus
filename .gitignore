@@ -5,6 +5,7 @@ __pycache__/
 *.cpython-310.pyc
 # C extensions
 *.so
+*.pyc
 
 # Distribution / packaging
 .Python
