@@ -7,7 +7,7 @@ import bpy
 from bpy.types import Operator
 import bmesh
 from mathutils import Vector
-from .custom_operator import CustomOperator, CustomModalOperator, ModalDrawText
+from .custom_operator import CustomOperator, CustomModalOperator, ModalDrawText, OperatorBaseClass
 import utils
 
 class OBJECT_OT_AddMultipleModifiers(bpy.types.Operator):
@@ -576,8 +576,6 @@ class CustomDecimate(CustomOperator, Operator):
 
 
 class ArrayModalOperator(CustomModalOperator, Operator):
-    """Move an object with the mouse, example"""
-
     bl_idname = "object.array_modal"
     bl_label = "Array Modal"
     constant: bpy.props.BoolProperty(default=True)
@@ -684,8 +682,7 @@ class ArrayModalOperator(CustomModalOperator, Operator):
 
     def invoke(self, context, event):
         obj = self.get_active_obj()
-        bpy.ops.object.modifier_add(type="ARRAY")
-        array = self._get_last_modifier()
+        array = obj.modifiers.new(name='Array', type="ARRAY")
         array.use_constant_offset = True
         array.use_relative_offset = False
         self.mod_name = array.name
@@ -969,6 +966,7 @@ class AddDisplaceCustom(CustomModalOperator, Operator):
     contrast: bpy.props.FloatProperty()
 
     textures = ['Clouds', 'Musgrave', 'Voronoi', 'Wood']
+    texture_objects = []
     current_texture_index = 0
     transform_axis = "z"
     texture_adjust_channel = None
@@ -1083,9 +1081,6 @@ class AddDisplaceCustom(CustomModalOperator, Operator):
         obj = context.active_object
         return obj is not None and obj.type == "MESH"
 
-    @property
-    def last_texture(self):
-        return bpy.data.textures[:][-1]
 
     @property
     def curr_text_props(self):
@@ -1106,19 +1101,20 @@ class AddDisplaceCustom(CustomModalOperator, Operator):
     def _init_textures(self):
         text_attrs = [t for t in self.textures if t]
         for name in text_attrs:
+            text_name = f'Displace_{name}'
             textype = name.upper()
-            bpy.ops.texture.new()
-            tex = self.last_texture
-            tex.name = f"Displace_{name}"
-            tex.type = textype
+            tex = bpy.data.textures.new(text_name, textype)
             tex['is_displace'] = True
-            tex = self.last_texture
             props = self.texture_properties[textype]
             for chan in props['mod_channel'].values():
                 val = getattr(tex, chan)
                 self.texture_properties[textype]['default_vals'][chan] = val
-        self.current_texture = bpy.data.textures[self.current_texture_index]
+            self.texture_objects.append(tex)
         self.mod.texture = self.current_texture
+
+    @property
+    def current_texture(self):
+        return self.texture_objects[self.current_texture_index]
 
     def _init_coords_empty(self):
         bpy.ops.object.add(location=self.obj.location)
@@ -1152,6 +1148,8 @@ class AddDisplaceCustom(CustomModalOperator, Operator):
             pass
 
     def invoke(self, context, event):
+        if context.mode != "OBJECT":
+            bpy.ops.object.mode_set(mode="OBJECT")
         self.init_x = event.mouse_x
         self.init_y = event.mouse_y
         self.obj = self.get_active_obj()
@@ -1171,14 +1169,16 @@ class AddDisplaceCustom(CustomModalOperator, Operator):
         self.active_coll = context.collection
         if "DisplaceCoords" not in colls:
             self.dp_coll = bpy.data.collections.new('DisplaceCoords')
-            self.scene_coll = bpy.data.scenes['Scene'].collection
+            self.scene_coll = context.scene.collection
             self.scene_coll.children.link(self.dp_coll)
-            self.dp_coll.hide_set(True)
+            
         else:
             self.dp_coll = bpy.data.collections['DisplaceCoords']
-        self.dp_coll.objects.link(self.empty)
+        self.layer_coll = utils.find_layer_collection(self.dp_coll)
+        self.layer_coll.hide_viewport = False
         empty_coll = self.empty.users_collection
         empty_coll[0].objects.unlink(self.empty)
+        self.dp_coll.objects.link(self.empty)
         context.window_manager.modal_handler_add(self)
 
         return {"RUNNING_MODAL"}
@@ -1226,12 +1226,11 @@ class AddDisplaceCustom(CustomModalOperator, Operator):
             addend = -1
         else:
             addend = 1
-        return (self.current_texture_index + addend) % len(self.all_scene_disp_textures)
+        return (self.current_texture_index + addend) % len(self.texture_objects)
 
     def _switch_textures(self, prev=False):
         new_index = self._new_texture_index(prev=prev)
         self.current_texture_index = new_index
-        self.current_texture = self.all_scene_disp_textures[new_index]
         self.mod.texture = self.current_texture
 
     def set_adj_chan(self, channel=None):
@@ -1352,11 +1351,11 @@ class AddDisplaceCustom(CustomModalOperator, Operator):
                 self.inverted *= -1
 
         elif event.type == "LEFTMOUSE":
-            self.cleanup_textures()
             e_name = re.sub('\.\d+', '', self.empty.name)
             self.empty.name = f"{e_name}_{self.obj.name}_{self.current_texture.type.capitalize()}"
+            self.layer_coll.hide_viewport = True
             self._clear_info(context)
-
+            self.cleanup_textures()
             return {"FINISHED"}
         elif event.type in {"RIGHTMOUSE", "ESC"}:
             self._clear_info(context)
@@ -1553,6 +1552,150 @@ class OBJECT_OT_triangulate_modifier_add(Operator):
 
 
 
+class RadialArray(OperatorBaseClass):
+
+    def __init__(self, context, args, op):
+        super().__init__(context, args, op)
+        self.active_object_offset = self._active_obj.location.y
+        self.current_mode = "ROTATE"
+        self.add_empty_obj()
+
+    
+    def add_empty_obj(self):
+        self.empty = bpy.data.objects.new(name=f"{self._active_obj.name}_RadialArrayOffset", object_data=None) 
+        self.context.collection.objects.link(self.empty)
+        self.empty.location = self._active_obj.location
+
+    
+    def add_array_mod(self):
+        mod = self._active_obj.modifiers.new(name="RadialArray", type="ARRAY")
+        mod.use_object_offset = True 
+        mod.use_relative_offset = False
+        mod.offset_object = self.empty
+        self._array_mod = mod
+
+    @property
+    def _rotation_value(self):
+        count = self.array_count 
+        print("DEG: ", self.degrees, "COUNT: ", count)
+        rotation_degrees = self.degrees / count
+        return np.radians(rotation_degrees)
+
+    def set_empty_rotation(self):
+        self.empty.rotation_euler.z = self._rotation_value
+
+    def _report_modal_status(self):
+        type = "CONSTANT"
+        msg = [
+            f'COUNT: {self.array_count}'
+            f'DEGREES: {self.degrees}'
+        ]
+        self.context.area.header_text_set(' '.join(msg))
+
+    def _set_array_count(self, event_type):
+        value = 1
+        if event_type == 'WHEELDOWNMOUSE':
+            value = -1
+        self.array_count += value
+        self._array_mod.count = self.array_count
+
+    def round_degree_amt(self, offset):
+        return min(0, max(360, offset))
+    
+    def set_degrees(self, offset):
+        self.degrees = offset
+
+    def set_object_offset(self, offset):
+        offset_val = offset * .001
+        self._active_obj.location.y = offset_val
+
+    def set_modal_offset(self, offset):
+        if self.current_mode == "MOVE":
+            self.set_object_offset(offset)
+            self.set_object_offset(offset)
+        else:
+            self.set_degrees(offset)
+            self.set_empty_rotation()
+
+    def set_current_mode(self, event):
+        modes = ['MOVE', 'ROTATE']
+        events = ['G', 'R']
+        eid = events.index(event.type)
+        self.current_mode = modes[eid]
+
+
+def radial_array_debug_setup(context):
+    ao = context.view_layer.objects.active
+    for mod in ao.modifiers[:]:
+        ao.modifiers.remove(mod)
+    for obj in bpy.data.objects[:]:
+        if obj.type == "EMPTY":
+            bpy.data.objects.remove(obj, do_unlink=True)
+
+class OBJECT_OT_RadialArrayModal(CustomModalOperator, Operator):
+    bl_idname = "object.radial_array_modal"
+    bl_label = 'Radial Array Modal'
+    bl_options = {"REGISTER", "UNDO"}
+
+    array_count: bpy.props.IntProperty(name="Array Count", description='Number of objects in the array', default=1)
+    degrees: bpy.props.FloatProperty(name="Array Count", description='Number of objects in the array', default=360)
+
+    @classmethod
+    def poll(cls, context):
+        conditions = [
+            context.active_object is not None,
+            context.active_object.type in {"MESH", "CURVE"},
+            context.mode == "OBJECT"
+
+        ]
+        return all(conditions)
+    
+    def invoke(self, context, event):
+        radial_array_debug_setup(context)
+        self.RadialArray = RadialArray(context, self.as_keywords(), self)
+        self.RadialArray.add_array_mod()
+        self.initial_mouse = event.mouse_x
+        context.window_manager.modal_handler_add(self)
+        return {'RUNNING_MODAL'}
+
+    
+    def modal(self, context, event):
+        ra = self.RadialArray
+        ra._report_modal_status()
+        if event.type in {"G", "R"}:
+            if event.value == 'PRESS':
+                ra.set_current_mode(event) 
+
+
+        if event.type in {'WHEELUPMOUSE', 'WHEELDOWNMOUSE'}:
+            ra._set_array_count(event.type)
+
+        if event.type == 'MOUSEMOVE':
+            multiplier = 1.0
+            if event.shift:
+                multiplier = 0.1
+            delta = self.initial_mouse - event.mouse_x
+            if event.ctrl:
+                snap_val = (np.floor(delta * (-multiplier)) )
+                offset = snap_val
+            else:
+                offset = delta * (-multiplier)
+            ra.set_modal_offset(offset)
+            
+            
+
+        elif event.type == 'LEFTMOUSE':
+            self._clear_info(context)
+            return {'FINISHED'}
+
+        elif event.type in {'RIGHTMOUSE', 'ESC'}:
+            self._clear_info(context)
+            ra._active_obj.modifiers.remove(ra._array_mod)
+            return {'CANCELLED'}        
+        return {"RUNNING_MODAL"}
+    
+
+
 # class SubDAndReprojectToActive(CustomOperator):
 
 #     def __init__(self, context, args, op):
@@ -1614,6 +1757,7 @@ classes = {
     OBJECT_OT_auto_crease_subdivide,
     OBJECT_OT_triangulate_modifier_add,
     OBJECT_OT_AddMultipleModifiers,
+    OBJECT_OT_RadialArrayModal
 }
 
 kms = []
